@@ -4,7 +4,7 @@ import sys
 
 import dotenv
 
-from fastchat import FastChat
+from fastvoicechat import FastVoiceChat
 
 dotenv.load_dotenv()
 
@@ -31,22 +31,22 @@ def main():
 
     logging.debug("Creating FastChat instance...")
 
-    fastchat = FastChat(
+    fastvoicechat = FastVoiceChat(
         speaker=args.speaker,
         allow_interrupt=not args.disable_interrupt,
         voicevox_host=os.getenv("VOICEVOX_HOST", "localhost:50021"),
     )
-    fastchat.start()
+    fastvoicechat.start()
     print("Press Ctrl+C to stop.")
     try:
         while True:
-            fastchat.utter_after_listening()
+            fastvoicechat.utter_after_listening()
             # time.sleep(0.5)
     except KeyboardInterrupt:
         print("KeyboardInterrupt detected. Stopping...")
-        fastchat.stop()
+        fastvoicechat.stop()
 
-    fastchat.join()
+    fastvoicechat.join()
     print("Main thread exiting.")
     sys.exit(0)
 

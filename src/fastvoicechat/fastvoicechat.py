@@ -3,11 +3,11 @@ import threading
 import time
 from typing import Literal
 
-from fastchat.thread.base import CallbackLoop
-from fastchat.thread.llm import LLM
-from fastchat.thread.stt import FastSTT
-from fastchat.thread.tts import TTS
-from fastchat.voicevox import VoiceVoxClient
+from fastvoicechat.thread.base import CallbackLoop
+from fastvoicechat.thread.llm import LLM
+from fastvoicechat.thread.stt import FastSTT
+from fastvoicechat.thread.tts import TTS
+from fastvoicechat.voicevox import VoiceVoxClient
 
 BACKCHANNEL_SYSTEM_PROMPT = (
     "対話履歴を踏まえて適切な相槌を生成してください。"
@@ -24,7 +24,7 @@ ANSWER_SYSTEM_PROMPT = (
 )
 
 
-class FastChat:
+class FastVoiceChat:
     def __init__(
         self,
         *,

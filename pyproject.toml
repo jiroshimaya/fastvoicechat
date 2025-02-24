@@ -1,10 +1,10 @@
 [project]
-name = "fastchat"
-version = "0.1.0"
-description = "Add your description here"
+name = "fastvoicechat"
+version = "0.0.0"
+description = "高速音声対話のデモプログラム"
 readme = "README.md"
 authors = [
-    { name = "GitHub Actions", email = "actions@github.com" }
+    { name = "shimajiroxyz" }
 ]
 requires-python = ">=3.11"
 dependencies = [

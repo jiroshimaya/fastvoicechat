@@ -9,7 +9,7 @@ openai api、google sttを使用して、マルチスレッド処理により高
 ```sh
 git clone [url]
 # 必要ならpipの前に仮想環境作成
-cd fastchat
+cd fastvoicechat
 # 環境変数ファイルをコピーして、voicevox、openai api、google stt用のjsonの情報を記入
 cp .env_sample .env
 ```
@@ -24,24 +24,22 @@ PCに話しかけて返答が再生されれば成功。
 
 ## プログラムから使う
 
-FastChat.utter_after_listening()メソッドにより高速リプライを使用できます。
+FastVoiceChat.utter_after_listening()メソッドにより高速リプライを使用できます。
 並列処理の関係上[^multiprocess]、`__main__`スコープ内で実行する必要があることに注意してください。
 
 [^multiprocess]: おそらくmultiprocessingを使用していることが原因で、multiprocessingは必須ではないので、機会があれば修正します
 
 ```Python
-from fastchat import FastChat
+from fastvoicechat import FastVoiceChat
 
 def main():
-    fastchat = FastChat(speaker="pc", 
-                        allow_interrupt= False,
-                        )
-    fastchat.start()
+    fastvoicechat = FastChat(allow_interrupt= False)
+    fastvoicechat.start()
     print("喋って!")
-    fastchat.utter_after_listening()
+    fastvoicechat.utter_after_listening()
     print("終了")
-    fastchat.stop()
-    fastchat.join()
+    fastvoicechat.stop()
+    fastvoicechat.join()
 
 if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ from typing import Literal
 
 import simpleaudio
 
-from fastchat.voicevox import VoiceVoxClient
+from fastvoicechat.voicevox import VoiceVoxClient
 
 
 def calculate_duration(content: bytes) -> float:

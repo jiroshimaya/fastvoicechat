@@ -221,8 +221,8 @@ def main():
     import sys
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from fastchat.thread.base import CallbackLoop
-    from fastchat.thread.stt import (
+    from fastvoicechat.thread.base import CallbackLoop
+    from fastvoicechat.thread.stt import (
         AudioCapture,
         GoogleSpeechRecognition,
         GoogleWebRTCVAD,
