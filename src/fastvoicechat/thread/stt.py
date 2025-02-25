@@ -4,7 +4,6 @@ import sys
 import threading
 import time
 import traceback
-from multiprocessing import Manager
 from typing import Callable
 
 import pyaudio
@@ -44,7 +43,8 @@ class GoogleSpeechRecognition(threading.Thread):
         self.reset_event = threading.Event()
         self.pause_event = threading.Event()
         self.pause_event.set()  # setされるとwait()が即座に返る
-        self._state = Manager().dict()
+        self._state = {}
+        self._state_lock = threading.RLock()
 
     def create_streaming_config(self) -> speech.StreamingRecognitionConfig:
         config = speech.RecognitionConfig(
@@ -143,26 +143,31 @@ class GoogleSpeechRecognition(threading.Thread):
         self.pause_event.set()
 
     def _update_state(self, result_dict):
-        previous_text = self.text
-        text = result_dict.get("text", "")
-        delta = text[len(previous_text) :]
-        self._state["delta"] = delta
-        self._state["result"] = result_dict
+        with self._state_lock:
+            previous_text = self.text
+            text = result_dict.get("text", "")
+            delta = text[len(previous_text) :]
+            self._state["delta"] = delta
+            self._state["result"] = result_dict
 
     def reset_state(self):
-        self._state.clear()
+        with self._state_lock:
+            self._state.clear()
 
     @property
     def result(self):
-        return self._state.get("result", {})
+        with self._state_lock:
+            return self._state.get("result", {})
 
     @property
     def text(self):
-        return self.result.get("text", "")
+        with self._state_lock:
+            return self.result.get("text", "")
 
     @property
     def delta(self):
-        return self._state.get("delta", "")
+        with self._state_lock:
+            return self._state.get("delta", "")
 
 
 class GoogleWebRTCVAD(threading.Thread):
@@ -187,7 +192,8 @@ class GoogleWebRTCVAD(threading.Thread):
         self.vad.set_mode(3)
         self.chunk_bytes = self.chunk * BYTE_PER_SAMPLE
         self.stop_event = stop_event or threading.Event()
-        self._state = Manager().dict()
+        self._state = {}
+        self._state_lock = threading.RLock()
 
     def run(self):
         # VADは10msごと（1フレーム）で判定
@@ -219,27 +225,32 @@ class GoogleWebRTCVAD(threading.Thread):
 
     @property
     def is_speech(self) -> bool:
-        return self._state.get("is_speech", False)
+        with self._state_lock:
+            return self._state.get("is_speech", False)
 
     @property
     def silence_count(self) -> int:
-        return self._state.get("silence_count", 0)
+        with self._state_lock:
+            return self._state.get("silence_count", 0)
 
     @property
     def speech_count(self) -> int:
-        return self._state.get("speech_count", 0)
+        with self._state_lock:
+            return self._state.get("speech_count", 0)
 
     def _update_state(self, is_speech) -> None:
-        self._state["is_speech"] = is_speech
-        if is_speech:
-            self._state["silence_count"] = 0
-            self._state["speech_count"] = self._state.get("speech_count", 0) + 1
-        else:
-            self._state["silence_count"] = self._state.get("silence_count", 0) + 1
-            self._state["speech_count"] = 0
+        with self._state_lock:
+            self._state["is_speech"] = is_speech
+            if is_speech:
+                self._state["silence_count"] = 0
+                self._state["speech_count"] = self._state.get("speech_count", 0) + 1
+            else:
+                self._state["silence_count"] = self._state.get("silence_count", 0) + 1
+                self._state["speech_count"] = 0
 
     def reset_state(self):
-        self._state.clear()
+        with self._state_lock:
+            self._state.clear()
 
 
 class AudioCapture(threading.Thread):

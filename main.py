@@ -7,7 +7,7 @@ import dotenv
 
 from fastvoicechat.asyncfastvoicechat import AsyncFastVoiceChat
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(override=True)
 
 
 async def async_main():
@@ -38,6 +38,7 @@ async def async_main():
     logging.basicConfig(level=getattr(logging, args.loglevel.upper(), None))
 
     if args.use_async:
+        print("VOICEVOX_HOST:", os.getenv("VOICEVOX_HOST"))
         logging.debug("Creating AsyncFastVoiceChat instance...")
         fastvoicechat = AsyncFastVoiceChat(
             speaker=args.speaker,
