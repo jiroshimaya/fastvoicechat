@@ -1,4 +1,4 @@
-# fastchat  
+# fastvoicechat  
 逐次応答生成の考え方に基づく高速な音声対話を実行するデモプログラムです。
 回答生成にopenai api、音声認識にgoogle stt、音声合成にvoicevoxを使用します。
 
