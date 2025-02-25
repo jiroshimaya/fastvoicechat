@@ -2,7 +2,6 @@ import queue
 import threading
 import time
 from dataclasses import dataclass
-from multiprocessing import Manager
 from typing import Callable, Generator
 
 from openai import OpenAI
@@ -30,7 +29,8 @@ class LLM:
         self.model = model
         self.system_prompt = system_prompt
         self.client: OpenAI = OpenAI()
-        self._state = Manager().dict()
+        self._state = {}  # Managerを使わずに通常の辞書に変更
+        self._state_lock = threading.Lock()  # 辞書アクセス用のロック
         self.answer_queue = queue.Queue()
         self.threads: list[ThreadInfo] = []
         self.separator = separator
@@ -180,20 +180,24 @@ class LLM:
 
     @property
     def previous_user_input(self) -> str:
-        return self._state.get("previous_user_input", "")
+        with self._state_lock:
+            return self._state.get("previous_user_input", "")
 
     @previous_user_input.setter
     def previous_user_input(self, value: str) -> None:
-        self._state["previous_user_input"] = value
+        with self._state_lock:
+            self._state["previous_user_input"] = value
 
     @property
     def history(self) -> list[tuple[str, str]]:
-        return self._state.get("history", [])
+        with self._state_lock:
+            return self._state.get("history", [])
 
     def add_history(self, value: list[tuple[str, str]]) -> None:
-        if "history" not in self._state:
-            self._state["history"] = []
-        self._state["history"] += value
+        with self._state_lock:
+            if "history" not in self._state:
+                self._state["history"] = []
+            self._state["history"] += value
 
     def tuples_to_messages(self, value: list[tuple[str, str]]) -> list:
         return [{"role": role, "content": content} for role, content in value]
