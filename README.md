@@ -58,7 +58,7 @@ if __name__ == "__main__":
     main()
 ```
 
-## 非同期方式(experimental[^experimental])
+## 非同期方式(experimental)
 
 asyncioを使用した非同期方式も利用可能です。
 こちらの方式ではasync/awaitを使用して処理を行います。
