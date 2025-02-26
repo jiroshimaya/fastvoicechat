@@ -9,11 +9,13 @@ class BasePlayer(ABC):
     def __init__(self, interval: float = 0.01):
         self.interval = interval
 
+    @abstractmethod
     async def play_voice(
         self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
     ) -> bool:
         """
-        音声再生を行い、終了または中断まで待機する
+        音声再生を行い、終了または中断まで待機する。
+
 
         Args:
             content: WAV音声のバイト列
@@ -22,23 +24,6 @@ class BasePlayer(ABC):
         Returns:
             bool: 正常終了したかどうか（Falseなら中断された）
         """
-        await self._play_voice(content)
-
-        if interrupt_event:
-            while self.is_playing:
-                if interrupt_event.is_set():
-                    await self.stop()
-                    return False
-                await asyncio.sleep(self.interval)
-        else:
-            while self.is_playing:
-                await asyncio.sleep(self.interval)
-
-        return True
-
-    @abstractmethod
-    async def _play_voice(self, content: bytes):
-        """音声再生の実装（サブクラスで実装）"""
         pass
 
     @abstractmethod

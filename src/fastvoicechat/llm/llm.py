@@ -352,6 +352,12 @@ class LLM:
             except asyncio.QueueEmpty:
                 break
 
+    async def close(self):
+        """クライアントリソースを解放"""
+        await self.reset()
+        if hasattr(self, "client") and self.client:
+            await self.client.close()
+
 
 # AsyncSTTクラスをインポート（既存のファイルからインポートするように調整してください）
 # from async_stt import AsyncGoogleSpeechRecognition, AsyncWebRTCVAD, AsyncAudioCapture, AsyncFastSTT

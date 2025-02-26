@@ -16,10 +16,20 @@ class SimpleAudioPlayer(BasePlayer):
         self.play_obj: Optional[simpleaudio.PlayObject] = None
         self._playing = False
         self._lock = asyncio.Lock()
-        self._monitor_task: Optional[asyncio.Task] = None  # モニタリングタスクを保持
 
-    async def _play_voice(self, content: bytes):
-        """音声を再生する"""
+    async def play_voice(
+        self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
+    ) -> bool:
+        """
+        音声を再生し、終了または中断まで待機する。
+
+        Args:
+            content: WAV音声のバイト列
+            interrupt_event: 再生を中断するためのイベント
+
+        Returns:
+            bool: 正常終了したかどうか（Falseなら中断された）
+        """
         loop = asyncio.get_running_loop()
 
         async with self._lock:
@@ -42,27 +52,25 @@ class SimpleAudioPlayer(BasePlayer):
             self.play_obj = await loop.run_in_executor(None, _play)
             self._playing = True
 
-        # 再生終了を監視する非同期タスク
-        async def monitor_playback():
-            try:
-                while self.play_obj and self.play_obj.is_playing():
+        # 再生が終了するか中断されるまで待機
+        try:
+            # 中断イベントがある場合は、それを監視しながら再生終了を待つ
+            if interrupt_event:
+                while self.is_playing:
+                    if interrupt_event.is_set():
+                        await self.stop()
+                        return False
+                    await asyncio.sleep(self.interval)
+            else:
+                # 直接ループで監視
+                while self.is_playing:
                     await asyncio.sleep(self.interval)
 
-                async with self._lock:
-                    self._playing = False
-            except Exception as e:
-                print(f"Monitor playback error: {e}")
-                self._playing = False
-
-        # 既存のモニタリングタスクがあればキャンセル
-        if self._monitor_task:
-            self._monitor_task.cancel()
-            try:
-                await self._monitor_task
-            except asyncio.CancelledError:
-                pass
-
-        self._monitor_task = asyncio.create_task(monitor_playback())
+            return True
+        except Exception as e:
+            print(f"Error in play_voice: {e}")
+            await self.stop()
+            return False
 
     @property
     def is_playing(self) -> bool:
@@ -80,14 +88,6 @@ class SimpleAudioPlayer(BasePlayer):
                 await loop.run_in_executor(None, lambda: play_obj.stop())
                 self.play_obj = None
                 self._playing = False
-
-            # モニタリングタスクをキャンセル
-            if self._monitor_task:
-                self._monitor_task.cancel()
-                try:
-                    await self._monitor_task
-                except asyncio.CancelledError:
-                    pass
 
 
 if __name__ == "__main__":
