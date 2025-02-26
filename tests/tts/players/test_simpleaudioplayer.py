@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from fastvoicechat.tts.players import SoundDevicePlayer
+from fastvoicechat.tts.players import SimpleAudioPlayer
 
 # --- テスト用ヘルパー関数群 ---
 
@@ -35,68 +35,52 @@ def test_wav_data():
     return create_test_wav_data()
 
 
-def stream_constructor(*args, **kwargs):
+def create_play_object_mock():
     """
-    sd.OutputStream をモックするためのヘルパー関数。
-
-    コンストラクタで渡された finished_callback を属性として保持し、
-    start() が呼ばれた際にその callback を実行する（※テストによっては上書きして
-    自動終了を防ぐことも可能）side_effect を設定します。
+    simpleaudio.PlayObject をモックするためのヘルパー関数。
     """
-    stream = MagicMock()
-    stream.finished_callback = kwargs.get("finished_callback")
-
-    def start_side_effect():
-        if stream.finished_callback:
-            stream.finished_callback()
-
-    stream.start.side_effect = start_side_effect
-    return stream
+    play_obj = MagicMock()
+    play_obj.is_playing.return_value = True
+    return play_obj
 
 
 # --- テストケース ---
 
 
-class TestSoundDevicePlayer:
+class TestSimpleAudioPlayer:
     @pytest.mark.asyncio
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
-    async def test_play_voice_normal_completion(
-        self, mock_output_stream, test_wav_data
-    ):
+    @patch("simpleaudio.play_buffer")
+    async def test_play_voice_normal_completion(self, mock_play_buffer, test_wav_data):
         """
         正常に再生完了する場合のテスト。
-        モックの start() が呼ばれると finished_callback が自動実行され、
-        _play_event がセットされることをシミュレート。
+        モックの is_playing() が最初は True を返し、その後 False を返すことで
+        再生完了をシミュレート。
         """
-        # コンテキストマネージャとしての __enter__ 呼び出し時も stream_constructor を利用
-        mock_output_stream.return_value.__enter__.side_effect = (
-            lambda: stream_constructor()
+        play_obj = create_play_object_mock()
+        mock_play_buffer.return_value = play_obj
+
+        # 再生完了をシミュレートするため、is_playing の戻り値を変更
+        is_playing_values = [True, True, False]
+        play_obj.is_playing.side_effect = (
+            lambda: is_playing_values.pop(0) if is_playing_values else False
         )
 
-        player = SoundDevicePlayer()
+        player = SimpleAudioPlayer(interval=0.01)
         result = await player.play_voice(test_wav_data)
 
         assert result is True  # 正常終了
-        mock_output_stream.assert_called_once()
+        mock_play_buffer.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
-    async def test_play_voice_with_interrupt(self, mock_output_stream, test_wav_data):
+    @patch("simpleaudio.play_buffer")
+    async def test_play_voice_with_interrupt(self, mock_play_buffer, test_wav_data):
         """
         割り込みイベントによって再生が中断される場合のテスト。
-        ここでは、start() の side_effect を上書きして自動終了しないようにし、
-        割り込み時に abort() が呼ばれることを検証します。
         """
-        # コンテキストマネージャ対応
-        mock_output_stream.return_value.__enter__.side_effect = (
-            lambda: stream_constructor()
-        )
-        # 再生が自動終了しないようにするため、stream_instance を作成し、start() を上書き
-        stream_instance = stream_constructor()
-        stream_instance.start.side_effect = lambda: None
-        mock_output_stream.return_value.__enter__.return_value = stream_instance
+        play_obj = create_play_object_mock()
+        mock_play_buffer.return_value = play_obj
 
-        player = SoundDevicePlayer()
+        player = SimpleAudioPlayer(interval=0.01)
         interrupt_event = asyncio.Event()
 
         async def set_interrupt():
@@ -108,25 +92,19 @@ class TestSoundDevicePlayer:
         result = await player.play_voice(test_wav_data, interrupt_event=interrupt_event)
 
         assert result is False  # 割り込みによる中断の場合は False
-        # stream_instance.abort.assert_called_once()  # 中断処理が呼ばれている
+        play_obj.stop.assert_called_once()  # 中断処理が呼ばれている
 
     @pytest.mark.asyncio
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
-    async def test_stop_method(self, mock_output_stream, test_wav_data):
+    @patch("simpleaudio.play_buffer")
+    async def test_stop_method(self, mock_play_buffer, test_wav_data):
         """
         stop() メソッドによる再生停止のテスト。
-        再生中に stop() を呼び出した際に、モックの abort() と close() が呼ばれることを検証します。
+        再生中に stop() を呼び出した際に、モックの stop() が呼ばれることを検証します。
         """
-        # コンテキストマネージャ対応
-        mock_output_stream.return_value.__enter__.side_effect = (
-            lambda: stream_constructor()
-        )
-        # 自動終了させず、stop() による中断を検証するため stream_instance を用意
-        stream_instance = stream_constructor()
-        stream_instance.start.side_effect = lambda: None
-        mock_output_stream.return_value.__enter__.return_value = stream_instance
+        play_obj = create_play_object_mock()
+        mock_play_buffer.return_value = play_obj
 
-        player = SoundDevicePlayer()
+        player = SimpleAudioPlayer(interval=0.01)
         play_task = asyncio.create_task(player.play_voice(test_wav_data))
 
         await asyncio.sleep(0.1)
@@ -134,6 +112,5 @@ class TestSoundDevicePlayer:
 
         await play_task
 
-        # stream_instance.abort.assert_called_once()  # stop() で abort() が呼ばれる
-        stream_instance.close.assert_called_once()  # stop() で close() が呼ばれる
+        play_obj.stop.assert_called_once()  # stop() で stop() が呼ばれる
         assert player.is_playing is False

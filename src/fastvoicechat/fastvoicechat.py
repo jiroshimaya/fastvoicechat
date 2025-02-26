@@ -153,11 +153,13 @@ class FastVoiceChat:
             self.interruption_observer.start()
 
     async def stop(self):
-        """全コンポーネントを停止"""
+        """全コンポーネントを停止し、リソースを解放する"""
         if not self._running:
             return
 
-        logging.debug("Stopping AsyncFastVoiceChat components...")
+        logging.debug(
+            "Stopping AsyncFastVoiceChat components and releasing resources..."
+        )
 
         # 各コンポーネントの停止
         if self.faststt:
@@ -177,13 +179,23 @@ class FastVoiceChat:
         if self.tts:
             await self.tts.stop()
 
-        self._running = False
-        logging.debug("AsyncFastVoiceChat components stopped")
+        # リソースの解放
+        if self.tts:
+            await self.tts.close()
 
-    async def join(self):
-        """全コンポーネントの終了を待機"""
-        # asyncioでは明示的なjoinは必要ないが、一貫性のためのメソッド
-        await self.stop()
+        # FastSTTのリソースを解放
+        if self.faststt:
+            await self.faststt.stop()
+
+        # LLMのクライアントを解放
+        if self.llm_backchannel:
+            await self.llm_backchannel.close()
+
+        if self.llm_answer:
+            await self.llm_answer.close()
+
+        self._running = False
+        logging.debug("AsyncFastVoiceChat components stopped and resources released")
 
     async def play_voice(
         self,

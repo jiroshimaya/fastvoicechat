@@ -45,10 +45,10 @@ async def async_main():
     try:
         while True:
             await fastvoicechat.utter_after_listening()
-    except KeyboardInterrupt:
-        print("KeyboardInterrupt detected. Stopping...")
+    except asyncio.CancelledError:
+        print("Task cancelled. Stopping...")
+    finally:
         await fastvoicechat.stop()
-        await fastvoicechat.join()
 
     print("Main thread exiting.")
     return 0
