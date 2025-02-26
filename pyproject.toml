@@ -10,11 +10,15 @@ requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.11.13",
     "google-cloud-speech>=2.31.0",
+    "numpy>=2.2.3",
     "openai>=1.64.0",
     "pyaudio>=0.2.14",
+    "pytest-asyncio>=0.25.3",
+    "pytest>=8.3.4",
     "python-dotenv>=1.0.1",
     "setuptools>=75.8.0",
     "simpleaudio>=1.0.4",
+    "sounddevice>=0.5.1",
     "webrtcvad>=2.0.10",
 ]
 
