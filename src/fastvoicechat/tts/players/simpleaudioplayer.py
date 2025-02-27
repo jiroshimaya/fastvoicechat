@@ -3,6 +3,7 @@ import io
 import wave
 from typing import Optional
 
+import numpy as np
 import simpleaudio
 
 from fastvoicechat.tts.base import BasePlayer
@@ -14,7 +15,6 @@ class SimpleAudioPlayer(BasePlayer):
     def __init__(self, interval: float = 0.01):
         super().__init__(interval)
         self.play_obj: Optional[simpleaudio.PlayObject] = None
-        self._playing = False
         self._lock = asyncio.Lock()
 
     async def play_voice(
@@ -30,27 +30,25 @@ class SimpleAudioPlayer(BasePlayer):
         Returns:
             bool: 正常終了したかどうか（Falseなら中断された）
         """
-        loop = asyncio.get_running_loop()
-
         async with self._lock:
             # 既存の再生があれば停止
-            if self.play_obj:
+            if self.play_obj is not None:
                 await self.stop()
 
-            def _play():
-                wav_io = io.BytesIO(content)
-                with wave.open(wav_io, "rb") as wf:
-                    audio_data = wf.readframes(wf.getnframes())
-                    return simpleaudio.play_buffer(
-                        audio_data,
-                        wf.getnchannels(),
-                        wf.getsampwidth(),
-                        wf.getframerate(),
-                    )
+            # WAVデータをNumPy配列に変換
+            wav_io = io.BytesIO(content)
+            with wave.open(wav_io, "rb") as wf:
+                channels = wf.getnchannels()
+                sample_width = wf.getsampwidth()
+                sample_rate = wf.getframerate()
+                raw_data = wf.readframes(wf.getnframes())
 
-            # 同期的なsimpleaudioの処理を別スレッドで実行
-            self.play_obj = await loop.run_in_executor(None, _play)
-            self._playing = True
+            audio_data = np.frombuffer(raw_data, dtype=np.int16)
+
+            # 再生開始
+            self.play_obj = simpleaudio.play_buffer(
+                audio_data, channels, sample_width, sample_rate
+            )
 
         # 再生が終了するか中断されるまで待機
         try:
@@ -75,24 +73,17 @@ class SimpleAudioPlayer(BasePlayer):
     @property
     def is_playing(self) -> bool:
         """再生中かどうかを返す"""
-        if self.play_obj is None:
-            return False
-        return self._playing and self.play_obj.is_playing()
+        return self.play_obj is not None and self.play_obj.is_playing()
 
     async def stop(self) -> None:
         """再生を停止する"""
         async with self._lock:
-            play_obj = self.play_obj
-            if play_obj:
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, lambda: play_obj.stop())
+            if self.play_obj is not None:
+                self.play_obj.stop()
                 self.play_obj = None
-                self._playing = False
 
 
 if __name__ == "__main__":
-    import numpy as np
-
     player = SimpleAudioPlayer()
 
     def create_test_wav_data(duration_sec=0.5, sample_rate=44100, frequency=440.0):
