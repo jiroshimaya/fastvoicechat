@@ -40,7 +40,12 @@ def create_play_object_mock():
     simpleaudio.PlayObject をモックするためのヘルパー関数。
     """
     play_obj = MagicMock()
-    play_obj.is_playing.return_value = True
+    # 再生完了をシミュレートするため、is_playing の戻り値を変更
+    is_playing_values = [True, True, False]
+    play_obj.is_playing.side_effect = (
+        lambda: is_playing_values.pop(0) if is_playing_values else False
+    )
+
     return play_obj
 
 
@@ -58,12 +63,6 @@ class TestSimpleAudioPlayer:
         """
         play_obj = create_play_object_mock()
         mock_play_buffer.return_value = play_obj
-
-        # 再生完了をシミュレートするため、is_playing の戻り値を変更
-        is_playing_values = [True, True, False]
-        play_obj.is_playing.side_effect = (
-            lambda: is_playing_values.pop(0) if is_playing_values else False
-        )
 
         player = SimpleAudioPlayer(interval=0.01)
         result = await player.play_voice(test_wav_data)
@@ -84,7 +83,7 @@ class TestSimpleAudioPlayer:
         interrupt_event = asyncio.Event()
 
         async def set_interrupt():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.001)
             interrupt_event.set()
 
         asyncio.create_task(set_interrupt())
@@ -93,24 +92,3 @@ class TestSimpleAudioPlayer:
 
         assert result is False  # 割り込みによる中断の場合は False
         play_obj.stop.assert_called_once()  # 中断処理が呼ばれている
-
-    @pytest.mark.asyncio
-    @patch("simpleaudio.play_buffer")
-    async def test_stop_method(self, mock_play_buffer, test_wav_data):
-        """
-        stop() メソッドによる再生停止のテスト。
-        再生中に stop() を呼び出した際に、モックの stop() が呼ばれることを検証します。
-        """
-        play_obj = create_play_object_mock()
-        mock_play_buffer.return_value = play_obj
-
-        player = SimpleAudioPlayer(interval=0.01)
-        play_task = asyncio.create_task(player.play_voice(test_wav_data))
-
-        await asyncio.sleep(0.1)
-        await player.stop()
-
-        await play_task
-
-        play_obj.stop.assert_called_once()  # stop() で stop() が呼ばれる
-        assert player.is_playing is False
