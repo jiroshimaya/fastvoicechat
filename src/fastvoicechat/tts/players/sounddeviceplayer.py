@@ -14,24 +14,24 @@ class SoundDevicePlayer(BasePlayer):
 
     def __init__(self, interval: float = 0.01):
         super().__init__(interval)
-        self._is_playing = False
-        self._current_stream: Optional[sd.OutputStream] = None
-        self._play_event = asyncio.Event()
         self._lock = asyncio.Lock()
-        # 音声バッファ管理用
-        self._audio_buffer: Optional[np.ndarray] = None
-        self._audio_buffer_pos = 0
 
-    def _finish_playback(self):
-        """再生完了時のクリーンアップ処理"""
-        self._is_playing = False
-        self._play_event.set()
-        self._current_stream = None
+    async def play_voice(
+        self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
+    ) -> bool:
+        """
+        音声を再生し、終了または中断まで待機する。
 
-    async def _play_voice(self, content: bytes):
+        Args:
+            content: WAV音声のバイト列
+            interrupt_event: 再生を中断するためのイベント
+
+        Returns:
+            bool: 正常終了したかどうか（Falseなら中断された）
+        """
         async with self._lock:
             # 既存の再生があれば停止
-            if self._is_playing:
+            if self.is_playing:
                 await self.stop()
 
             # WAVデータをNumPy配列に変換
@@ -59,72 +59,47 @@ class SoundDevicePlayer(BasePlayer):
                 else:
                     audio_data = audio_data.reshape(-1, 1)
 
-            # 再生開始前にバッファと再生位置を初期化
-            self._play_event.clear()
-            self._audio_buffer = audio_data
-            self._audio_buffer_pos = 0
+            # 再生開始（sd.playは非同期的に動作する）
+            sd.play(audio_data, sample_rate, blocking=False)
 
-            # 現在のイベントループを取得（コールバックからの終了通知用）
-            loop = asyncio.get_running_loop()
-
-            def callback(outdata, frames, time, status):
-                if status:
-                    print(f"Status: {status}")
-                if self._audio_buffer is None:
-                    return
-                available_frames = self._audio_buffer.shape[0] - self._audio_buffer_pos
-                if available_frames >= frames:
-                    outdata[:] = self._audio_buffer[
-                        self._audio_buffer_pos : self._audio_buffer_pos + frames
-                    ]
-                    self._audio_buffer_pos += frames
-                else:
-                    if available_frames > 0:
-                        outdata[:available_frames] = self._audio_buffer[
-                            self._audio_buffer_pos :
-                        ]
-                    outdata[available_frames:] = 0
-                    self._audio_buffer_pos += available_frames
-                    # 再生終了を通知
-                    raise sd.CallbackStop
-
-            def finished_callback():
-                loop.call_soon_threadsafe(self._finish_playback)
-
-            # コールバックモードでストリーム作成
-            self._current_stream = sd.OutputStream(
-                samplerate=sample_rate,
-                channels=channels,
-                dtype=audio_data.dtype,
-                callback=callback,
-                finished_callback=finished_callback,
-            )
-            self._current_stream.start()
-            self._is_playing = True
-
-        # ロックの外で待機
+        # 中断イベントがある場合は、それを監視しながら再生終了を待つ
         try:
-            await self._play_event.wait()
+            # SimpleAudioPlayerと同様のポーリングベースの実装
+            if interrupt_event:
+                # 割り込みイベントを監視しながら再生終了を待つ
+                while self.is_playing:
+                    if interrupt_event.is_set():
+                        await self.stop()
+                        return False
+                    await asyncio.sleep(self.interval)
+            else:
+                # 直接ループで監視
+                while self.is_playing:
+                    await asyncio.sleep(self.interval)
+
+            return True
         except Exception as e:
-            print(f"Error in _play_voice: {e}")
-            self._is_playing = False
-            self._current_stream = None
-            self._play_event.set()
+            print(f"Error in play_voice: {e}")
+            await self.stop()
+            return False
 
     async def stop(self) -> None:
         """再生を停止する"""
         async with self._lock:
-            if self._current_stream:
-                self._current_stream.abort()
-                self._current_stream.close()
-                self._current_stream = None
-            self._is_playing = False
-            self._play_event.set()  # 待機中のタスクを解放
+            if self.is_playing:
+                # sd.stopは非同期的に動作する
+                sd.stop()
 
     @property
     def is_playing(self) -> bool:
         """再生中かどうかを返す"""
-        return self._is_playing
+        try:
+            stream = sd.get_stream()
+            if stream is None:
+                return False
+            return stream.active
+        except Exception:
+            return False
 
 
 if __name__ == "__main__":

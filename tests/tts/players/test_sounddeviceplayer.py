@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from fastvoicechat.tts.players import SoundDevicePlayer
+from fastvoicechat.tts.players.sounddeviceplayer import SoundDevicePlayer
 
 # --- テスト用ヘルパー関数群 ---
 
@@ -35,110 +35,125 @@ def test_wav_data():
     return create_test_wav_data()
 
 
-def stream_constructor(*args, **kwargs):
-    """
-    sd.OutputStream をモックするためのヘルパー関数。
-
-    コンストラクタで渡された finished_callback を属性として保持し、
-    start() が呼ばれた際にその callback を実行する（※テストによっては上書きして
-    自動終了を防ぐことも可能）side_effect を設定します。
-    """
-    stream = MagicMock()
-    stream.finished_callback = kwargs.get("finished_callback")
-
-    def start_side_effect():
-        if stream.finished_callback:
-            stream.finished_callback()
-
-    stream.start.side_effect = start_side_effect
-    return stream
-
-
 # --- テストケース ---
+
+
+def create_mock_behavior():
+    """
+    sounddeviceモジュールのモックを作成する関数
+    Returns:
+        dict: sounddeviceモジュールのモック。
+        play, get_stream, stopなどの主要な関数を含みます。
+    """
+    is_play_called = False
+    mock_stream = MagicMock()
+
+    # get_streamの動作設定
+    def get_stream_behavior():
+        nonlocal is_play_called
+        nonlocal mock_stream
+
+        if not is_play_called:
+            raise RuntimeError("No active stream")
+        return mock_stream
+
+    # playの動作設定
+    def play_behavior(*args, **kwargs):
+        nonlocal is_play_called
+        nonlocal mock_stream
+
+        stream_active = [True, True, False]  # 待機ループの３回目で終了する動作を模倣
+        is_play_called = True
+        # ストリームのactiveプロパティを設定
+        type(mock_stream).active = property(
+            lambda self: stream_active.pop(0) if stream_active else False
+        )
+
+    # stopの動作設定
+    def stop_behavior():
+        nonlocal mock_stream
+
+        type(mock_stream).active = False
+
+    return {
+        "get_stream": get_stream_behavior,
+        "play": play_behavior,
+        "stop": stop_behavior,
+    }
 
 
 class TestSoundDevicePlayer:
     @pytest.mark.asyncio
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
+    @patch("sounddevice.play")
+    @patch("sounddevice.get_stream")
     async def test_play_voice_normal_completion(
-        self, mock_output_stream, test_wav_data
+        self, mock_get_stream, mock_play, test_wav_data
     ):
+        mock_behavior = create_mock_behavior()
+        mock_get_stream.side_effect = mock_behavior["get_stream"]
+        mock_play.side_effect = mock_behavior["play"]
+
         """
         正常に再生完了する場合のテスト。
-        モックの start() が呼ばれると finished_callback が自動実行され、
-        _play_event がセットされることをシミュレート。
         """
-        # コンテキストマネージャとしての __enter__ 呼び出し時も stream_constructor を利用
-        mock_output_stream.return_value.__enter__.side_effect = (
-            lambda: stream_constructor()
-        )
-
         player = SoundDevicePlayer()
         result = await player.play_voice(test_wav_data)
 
         assert result is True  # 正常終了
-        mock_output_stream.assert_called_once()
+        mock_play.assert_called_once()
+        # 再生が完了するまでget_streamが複数回呼ばれることを確認
+        assert mock_get_stream.call_count > 1
 
     @pytest.mark.asyncio
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
-    async def test_play_voice_with_interrupt(self, mock_output_stream, test_wav_data):
+    @patch("sounddevice.play")
+    @patch("sounddevice.get_stream")
+    @patch("sounddevice.stop")
+    async def test_play_voice_with_interrupt(
+        self, mock_stop, mock_get_stream, mock_play, test_wav_data
+    ):
         """
         割り込みイベントによって再生が中断される場合のテスト。
         """
-        # WAV データの長さを計算
-        with wave.open(io.BytesIO(test_wav_data), "rb") as wf:
-            sample_rate = wf.getframerate()
-            frames = wf.getnframes()
-            audio_length_sec = (
-                frames / sample_rate
-            )  # 再生時間 = 総フレーム数 / サンプリングレート
+        mock_behavior = create_mock_behavior()
+        mock_get_stream.side_effect = mock_behavior["get_stream"]
+        mock_play.side_effect = mock_behavior["play"]
+        mock_stop.side_effect = mock_behavior["stop"]
 
-        # モックの設定
-        stream_instance = stream_constructor()
-        stream_instance.audio_length_sec = audio_length_sec  # 再生時間を設定
-        stream_instance.abort.side_effect = (
-            lambda: stream_instance.finished_callback()
-        )  # 中断時に終了処理を実行
-        stream_instance.start.side_effect = lambda: None  # 自動終了しないようにする
-        mock_output_stream.return_value.__enter__.return_value = stream_instance
-
-        player = SoundDevicePlayer()
         interrupt_event = asyncio.Event()
 
-        async def set_interrupt():
-            await asyncio.sleep(0.1)
-            interrupt_event.set()
+        player = SoundDevicePlayer()
+        play_task = asyncio.create_task(
+            player.play_voice(test_wav_data, interrupt_event)
+        )
 
-        asyncio.create_task(set_interrupt())
+        await asyncio.sleep(0.01)
+        interrupt_event.set()
 
-        result = await player.play_voice(test_wav_data, interrupt_event=interrupt_event)
+        result = await play_task
 
-        assert result is False  # 割り込みによる中断の場合は False
-        stream_instance.abort.assert_called_once()  # abort() が呼ばれたことを確認    @pytest.mark.asyncio
+        assert result is False  # 中断されたのでFalseが返される
 
-    @patch("sounddevice.OutputStream", side_effect=stream_constructor)
-    async def test_stop_method(self, mock_output_stream, test_wav_data):
+    @pytest.mark.asyncio
+    @patch("sounddevice.get_stream")
+    @patch("sounddevice.stop")
+    @patch("sounddevice.play")
+    async def test_stop_method(
+        self, mock_play, mock_stop, mock_get_stream, test_wav_data
+    ):
         """
         stop() メソッドによる再生停止のテスト。
-        再生中に stop() を呼び出した際に、モックの abort() と close() が呼ばれることを検証します。
         """
-        # コンテキストマネージャ対応
-        mock_output_stream.return_value.__enter__.side_effect = (
-            lambda: stream_constructor()
-        )
-        # 自動終了させず、stop() による中断を検証するため stream_instance を用意
-        stream_instance = stream_constructor()
-        stream_instance.start.side_effect = lambda: None
-        mock_output_stream.return_value.__enter__.return_value = stream_instance
+        mock_behavior = create_mock_behavior()
+        mock_get_stream.side_effect = mock_behavior["get_stream"]
+        mock_play.side_effect = mock_behavior["play"]
+        mock_stop.side_effect = mock_behavior["stop"]
 
         player = SoundDevicePlayer()
         play_task = asyncio.create_task(player.play_voice(test_wav_data))
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.01)
         await player.stop()
+        result = await play_task
 
-        await play_task
-
-        stream_instance.abort.assert_called_once()  # stop() で abort() が呼ばれる
-        stream_instance.close.assert_called_once()  # stop() で close() が呼ばれる
         assert player.is_playing is False
+        mock_stop.assert_called_once()
