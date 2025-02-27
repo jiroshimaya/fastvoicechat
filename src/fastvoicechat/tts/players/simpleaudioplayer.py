@@ -53,16 +53,11 @@ class SimpleAudioPlayer(BasePlayer):
         # 再生が終了するか中断されるまで待機
         try:
             # 中断イベントがある場合は、それを監視しながら再生終了を待つ
-            if interrupt_event:
-                while self.is_playing:
-                    if interrupt_event.is_set():
-                        await self.stop()
-                        return False
-                    await asyncio.sleep(self.interval)
-            else:
-                # 直接ループで監視
-                while self.is_playing:
-                    await asyncio.sleep(self.interval)
+            while self.is_playing:
+                if interrupt_event is not None and interrupt_event.is_set():
+                    await self.stop()
+                    return False
+                await asyncio.sleep(self.interval)
 
             return True
         except Exception as e:

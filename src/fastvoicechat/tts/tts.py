@@ -3,7 +3,7 @@ import io
 import wave
 from typing import Optional
 
-from fastvoicechat.tts.players import SimpleAudioPlayer
+from fastvoicechat.tts.players import SoundDevicePlayer
 from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
 
 
@@ -25,7 +25,7 @@ class TTS:
         self.text = ""
 
         # プレイヤータイプに応じたプレイヤーを選択
-        self.player = SimpleAudioPlayer()
+        self.player = SoundDevicePlayer()
 
     async def play_voice(
         self, text: str, interrupt_event: Optional[asyncio.Event] = None

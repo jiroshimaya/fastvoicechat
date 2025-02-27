@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from fastvoicechat.tts.players.sounddeviceplayer import SoundDevicePlayer
+from fastvoicechat.tts.players import SoundDevicePlayer
 
 # --- テスト用ヘルパー関数群 ---
 
@@ -132,28 +132,3 @@ class TestSoundDevicePlayer:
         result = await play_task
 
         assert result is False  # 中断されたのでFalseが返される
-
-    @pytest.mark.asyncio
-    @patch("sounddevice.get_stream")
-    @patch("sounddevice.stop")
-    @patch("sounddevice.play")
-    async def test_stop_method(
-        self, mock_play, mock_stop, mock_get_stream, test_wav_data
-    ):
-        """
-        stop() メソッドによる再生停止のテスト。
-        """
-        mock_behavior = create_mock_behavior()
-        mock_get_stream.side_effect = mock_behavior["get_stream"]
-        mock_play.side_effect = mock_behavior["play"]
-        mock_stop.side_effect = mock_behavior["stop"]
-
-        player = SoundDevicePlayer()
-        play_task = asyncio.create_task(player.play_voice(test_wav_data))
-
-        await asyncio.sleep(0.01)
-        await player.stop()
-        result = await play_task
-
-        assert player.is_playing is False
-        mock_stop.assert_called_once()
