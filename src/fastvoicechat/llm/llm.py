@@ -9,12 +9,9 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 from openai import AsyncOpenAI
 
-# 以下は実際のインポートに合わせて調整してください
-from fastvoicechat.asynclib.stt import AsyncFastSTT
-
 
 @dataclass
-class AsyncTaskInfo:
+class TaskInfo:
     """非同期タスク情報を保持するデータクラス"""
 
     task: asyncio.Task
@@ -24,7 +21,7 @@ class AsyncTaskInfo:
     additional_messages: List[Tuple[str, str]]
 
 
-class AsyncLLM:
+class LLM:
     """
     LLMをasyncioで並列実行する非同期クラス
 
@@ -43,7 +40,7 @@ class AsyncLLM:
         self.client = AsyncOpenAI()
         self._state: Dict[str, Any] = {}
         self.answer_queue = asyncio.Queue()
-        self.tasks: List[AsyncTaskInfo] = []
+        self.tasks: List[TaskInfo] = []
         self.separator = separator
         self._lock = asyncio.Lock()
 
@@ -279,7 +276,7 @@ class AsyncLLM:
             additional_messages = []
 
         # タスク情報を保存
-        task_info = AsyncTaskInfo(
+        task_info = TaskInfo(
             task=task,
             stop_event=stop_event,
             start_time=start_time,
@@ -355,6 +352,12 @@ class AsyncLLM:
             except asyncio.QueueEmpty:
                 break
 
+    async def close(self):
+        """クライアントリソースを解放"""
+        await self.reset()
+        if hasattr(self, "client") and self.client:
+            await self.client.close()
+
 
 # AsyncSTTクラスをインポート（既存のファイルからインポートするように調整してください）
 # from async_stt import AsyncGoogleSpeechRecognition, AsyncWebRTCVAD, AsyncAudioCapture, AsyncFastSTT
@@ -370,6 +373,9 @@ async def main():
     非同期メイン関数 - AsyncSTTとAsyncLLMを使用する音声対話システム
     コールバックループを使わないシンプルな実装
     """
+
+    from fastvoicechat.stt import FastSTT
+
     # ロギング設定
     logging.basicConfig(
         level=logging.INFO,
@@ -484,7 +490,7 @@ async def main():
     logging.info("非同期音声対話システムを初期化中...")
 
     # FastSTTの作成
-    faststt = AsyncFastSTT(stt_callback=stt_callback, vad_callback=vad_callback)
+    faststt = FastSTT(stt_callback=stt_callback, vad_callback=vad_callback)
 
     # LLMの作成
     backchannel_system_prompt = (
@@ -493,11 +499,9 @@ async def main():
         "どのような相槌が適切か判断が難しい場合は「へー」「うーん」など無難な相槌を出力してください。"
     )
 
-    llm_backchannel = AsyncLLM(
-        system_prompt=backchannel_system_prompt, model="gpt-4o-mini"
-    )
+    llm_backchannel = LLM(system_prompt=backchannel_system_prompt, model="gpt-4o-mini")
 
-    llm_answer = AsyncLLM(model="gpt-4o")
+    llm_answer = LLM(model="gpt-4o")
 
     # システム開始
     faststt.start()

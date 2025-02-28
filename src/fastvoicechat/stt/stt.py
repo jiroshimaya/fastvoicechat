@@ -20,7 +20,7 @@ VAD_CHUNK = 160
 BYTE_PER_SAMPLE = 2  # 16bit
 
 
-class AsyncGoogleSpeechRecognition:
+class GoogleSpeechRecognition:
     """
     Google Speech-to-Textの非同期ラッパークラス
     """
@@ -391,7 +391,7 @@ class AsyncGoogleSpeechRecognition:
         return self._state.get("delta", "")
 
 
-class AsyncWebRTCVAD:
+class WebRTCVAD:
     """
     WebRTCVADの非同期ラッパークラス
     """
@@ -525,7 +525,7 @@ class AsyncWebRTCVAD:
             self._state.clear()
 
 
-class AsyncAudioCapture:
+class AudioCapture:
     """
     PyAudioの非同期ラッパークラス
     """
@@ -595,7 +595,7 @@ class AsyncAudioCapture:
             await self._task
 
 
-class AsyncFastSTT:
+class FastSTT:
     """
     STTとVADを統合する非同期クラス
     """
@@ -615,11 +615,11 @@ class AsyncFastSTT:
         self.vad_queue = asyncio.Queue()
 
         # 各コンポーネントを初期化
-        self.stt = AsyncGoogleSpeechRecognition(
+        self.stt = GoogleSpeechRecognition(
             audio_queue=self.stt_queue, callback=stt_callback
         )
-        self.vad = AsyncWebRTCVAD(audio_queue=self.vad_queue, callback=vad_callback)
-        self.audio_capture = AsyncAudioCapture([self.stt_queue, self.vad_queue])
+        self.vad = WebRTCVAD(audio_queue=self.vad_queue, callback=vad_callback)
+        self.audio_capture = AudioCapture([self.stt_queue, self.vad_queue])
 
     def start(self):
         """
@@ -694,7 +694,7 @@ if __name__ == "__main__":
 
         logging.info("非同期FastSTTインスタンスを作成中...")
         # 非同期コールバック関数を渡す
-        faststt = AsyncFastSTT(
+        faststt = FastSTT(
             stt_callback=sync_stt_callback,  # 同期コールバックでもOK
             vad_callback=sync_vad_callback,
         )
