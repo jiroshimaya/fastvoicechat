@@ -10,7 +10,7 @@ class BasePlayer(ABC):
         self.interval = interval
 
     @abstractmethod
-    async def play_voice(
+    async def aplay_voice(
         self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
     ) -> bool:
         """
@@ -27,7 +27,7 @@ class BasePlayer(ABC):
         pass
 
     @abstractmethod
-    async def stop(self) -> None:
+    async def astop(self) -> None:
         """再生停止の実装（サブクラスで実装）"""
         pass
 
@@ -42,7 +42,7 @@ class BaseSynthesizer(ABC):
     """音声合成の抽象基底クラス"""
 
     @abstractmethod
-    async def synthesize(self, text: str, speaker_id: int = 0) -> bytes:
+    async def asynthesize(self, text: str, speaker_id: int = 0) -> bytes:
         """
         テキストから音声を合成する
 
@@ -56,7 +56,7 @@ class BaseSynthesizer(ABC):
         pass
 
     @abstractmethod
-    async def get_available_speakers(self) -> list:
+    async def aget_available_speakers(self) -> list:
         """
         利用可能な話者リストを取得する
 
@@ -66,6 +66,6 @@ class BaseSynthesizer(ABC):
         pass
 
     @abstractmethod
-    async def close(self):
+    async def aclose(self):
         """リソースを解放する"""
         pass

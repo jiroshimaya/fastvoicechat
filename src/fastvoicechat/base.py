@@ -19,24 +19,24 @@ class CallbackLoop:
 
         # 追加の状態をセット
         for k, v in kwargs.items():
-            self.set_sync(k, v)
+            self.set(k, v)
 
-    async def get(self, key):
+    async def aget(self, key):
         """状態から値を取得"""
         async with self._lock:
             return self._state.get(key)
 
-    async def set(self, key, value):
+    async def aset(self, key, value):
         """状態に値をセット"""
         async with self._lock:
             self._state[key] = value
 
-    def set_sync(self, key, value):
+    def set(self, key, value):
         """状態に値をセット（同期版）"""
         # 初期化時はロックが必要ないので直接セット
         self._state[key] = value
 
-    async def run(self):
+    async def arun(self):
         """メインループ"""
         try:
             while not self.stop_event.is_set():
@@ -52,13 +52,13 @@ class CallbackLoop:
             logging.error(f"[{self.name}] Error: {e}")
             logging.error(traceback.format_exc())
 
-    def start(self):
+    async def astart(self):
         """タスクを開始"""
         if self._task is None or self._task.done():
             self.stop_event.clear()
-            self._task = asyncio.create_task(self.run())
+            self._task = asyncio.create_task(self.arun())
 
-    async def stop(self):
+    async def astop(self):
         """タスクを停止"""
         self.stop_event.set()
         if self._task and not self._task.done():

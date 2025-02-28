@@ -65,7 +65,7 @@ class TestSimpleAudioPlayer:
         mock_play_buffer.return_value = play_obj
 
         player = SimpleAudioPlayer(interval=0.01)
-        result = await player.play_voice(test_wav_data)
+        result = await player.aplay_voice(test_wav_data)
 
         assert result is True  # 正常終了
         mock_play_buffer.assert_called_once()
@@ -88,7 +88,9 @@ class TestSimpleAudioPlayer:
 
         asyncio.create_task(set_interrupt())
 
-        result = await player.play_voice(test_wav_data, interrupt_event=interrupt_event)
+        result = await player.aplay_voice(
+            test_wav_data, interrupt_event=interrupt_event
+        )
 
         assert result is False  # 割り込みによる中断の場合は False
         play_obj.stop.assert_called_once()  # 中断処理が呼ばれている

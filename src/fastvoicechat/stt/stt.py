@@ -83,7 +83,7 @@ class GoogleSpeechRecognition:
         )
         return streaming_config
 
-    async def run(self):
+    async def arun(self):
         """
         非同期のメインループ
         """
@@ -93,10 +93,10 @@ class GoogleSpeechRecognition:
                 await self.pause_event.wait()
 
                 # ウォッチドッグタスクを開始（認識が止まったら再起動する）
-                watchdog_task = asyncio.create_task(self._recognition_watchdog())
+                watchdog_task = asyncio.create_task(self._arecognition_watchdog())
 
                 # 音声認識タスク
-                await self._run_recognition_session()
+                await self._arun_recognition_session()
 
                 # ウォッチドッグをキャンセル
                 watchdog_task.cancel()
@@ -113,7 +113,7 @@ class GoogleSpeechRecognition:
                 # エラーが発生しても続行するために少し待機
                 await asyncio.sleep(1)
 
-    async def _recognition_watchdog(self):
+    async def _arecognition_watchdog(self):
         """認識が停止したら再起動するウォッチドッグ"""
         while not self.stop_event.is_set() and not self.reset_event.is_set():
             await asyncio.sleep(5)  # 5秒ごとにチェック
@@ -126,7 +126,7 @@ class GoogleSpeechRecognition:
                 self.reset_event.set()  # 現在のセッションをリセット
                 break
 
-    async def _run_recognition_session(self):
+    async def _arun_recognition_session(self):
         """音声認識の1セッションを実行"""
         loop = asyncio.get_running_loop()
         client = speech.SpeechClient()
@@ -141,7 +141,7 @@ class GoogleSpeechRecognition:
         streaming_thread = None
 
         # AudioCollectorタスク - メインのイベントループで実行
-        async def audio_collector():
+        async def aaudio_collector():
             nonlocal audio_buffer
             try:
                 while (
@@ -229,7 +229,7 @@ class GoogleSpeechRecognition:
         response_queue = queue.Queue()
 
         # オーディオコレクタータスクを開始
-        collector_task = asyncio.create_task(audio_collector())
+        collector_task = asyncio.create_task(aaudio_collector())
 
         # 認識アクティブフラグをセット
         self._recognition_active = True
@@ -263,7 +263,7 @@ class GoogleSpeechRecognition:
                             result_type = "final" if result.is_final else "interim"
                             result_dict = {"type": result_type, "text": transcript}
 
-                            await self._update_state(result_dict)
+                            await self._aupdate_state(result_dict)
 
                             # コールバック呼び出し
                             if self.callback:
@@ -310,14 +310,15 @@ class GoogleSpeechRecognition:
             except asyncio.CancelledError:
                 pass
 
-    def start(self):
+    async def astart(self):
         """
         非同期タスクを開始
         """
-        if self._task is None or self._task.done():
-            self._task = asyncio.create_task(self.run())
 
-    async def stop(self):
+        if self._task is None or self._task.done():
+            self._task = asyncio.create_task(self.arun())
+
+    async def astop(self):
         """
         非同期タスクを停止
         """
@@ -327,23 +328,23 @@ class GoogleSpeechRecognition:
         if self._task is not None and not self._task.done():
             await self._task
 
-    async def start_new_session(self):
+    async def astart_new_session(self):
         """
         新しいセッションを開始
         """
-        await self.clear_audio_queue()
+        await self.aclear_audio_queue()
         self.reset_event.set()
         self.pause_event.set()
-        await self.reset_state()
+        await self.areset_state()
 
-    async def pause(self):
+    async def apause(self):
         """
         音声認識を一時停止
         """
         self.pause_event.clear()
         self.reset_event.set()
 
-    async def clear_audio_queue(self):
+    async def aclear_audio_queue(self):
         """
         オーディオキューをクリア
         """
@@ -353,14 +354,14 @@ class GoogleSpeechRecognition:
             except asyncio.QueueEmpty:
                 break
 
-    async def resume(self):
+    async def aresume(self):
         """
         音声認識を再開
         """
-        await self.clear_audio_queue()
+        await self.aclear_audio_queue()
         self.pause_event.set()
 
-    async def _update_state(self, result_dict):
+    async def _aupdate_state(self, result_dict):
         """
         状態を更新
         """
@@ -371,7 +372,7 @@ class GoogleSpeechRecognition:
             self._state["delta"] = delta
             self._state["result"] = result_dict
 
-    async def reset_state(self):
+    async def areset_state(self):
         """
         状態をリセット
         """
@@ -422,7 +423,7 @@ class WebRTCVAD:
         self._state: Dict[str, Any] = {}
         self._lock = asyncio.Lock()
 
-    async def run(self):
+    async def arun(self):
         """
         非同期のメインループ
         """
@@ -452,7 +453,7 @@ class WebRTCVAD:
                         )
 
                         # 状態を更新
-                        await self._update_state(is_speech)
+                        await self._aupdate_state(is_speech)
 
                         if self.callback:
                             try:
@@ -477,14 +478,14 @@ class WebRTCVAD:
             logging.error(f"Error in VAD main loop: {e}")
             logging.error(traceback.format_exc())
 
-    def start(self):
+    async def astart(self):
         """
         非同期タスクを開始
         """
         if self._task is None or self._task.done():
-            self._task = asyncio.create_task(self.run())
+            self._task = asyncio.create_task(self.arun())
 
-    async def stop(self):
+    async def astop(self):
         """
         非同期タスクを停止
         """
@@ -504,7 +505,7 @@ class WebRTCVAD:
     def speech_count(self) -> int:
         return self._state.get("speech_count", 0)
 
-    async def _update_state(self, is_speech):
+    async def _aupdate_state(self, is_speech):
         """
         状態を更新
         """
@@ -517,7 +518,7 @@ class WebRTCVAD:
                 self._state["silence_count"] = self._state.get("silence_count", 0) + 1
                 self._state["speech_count"] = 0
 
-    async def reset_state(self):
+    async def areset_state(self):
         """
         状態をリセット
         """
@@ -547,7 +548,7 @@ class AudioCapture:
         self.stop_event = asyncio.Event()
         self._task = None
 
-    async def run(self):
+    async def arun(self):
         """
         非同期のメインループ
         """
@@ -579,14 +580,14 @@ class AudioCapture:
             self.audio_stream.close()
             self.audio_interface.terminate()
 
-    def start(self):
+    async def astart(self):
         """
         非同期タスクを開始
         """
         if self._task is None or self._task.done():
-            self._task = asyncio.create_task(self.run())
+            self._task = asyncio.create_task(self.arun())
 
-    async def stop(self):
+    async def astop(self):
         """
         非同期タスクを停止
         """
@@ -621,21 +622,21 @@ class FastSTT:
         self.vad = WebRTCVAD(audio_queue=self.vad_queue, callback=vad_callback)
         self.audio_capture = AudioCapture([self.stt_queue, self.vad_queue])
 
-    def start(self):
+    async def astart(self):
         """
         全コンポーネントを開始
         """
-        self.audio_capture.start()
-        self.stt.start()
-        self.vad.start()
+        await self.audio_capture.astart()
+        await self.stt.astart()
+        await self.vad.astart()
 
-    async def stop(self):
+    async def astop(self):
         """
         全コンポーネントを停止
         """
-        await self.audio_capture.stop()
-        await self.stt.stop()
-        await self.vad.stop()
+        await self.audio_capture.astop()
+        await self.stt.astop()
+        await self.vad.astop()
 
     @property
     def is_speech_ended(self) -> bool:
@@ -700,11 +701,11 @@ if __name__ == "__main__":
         )
 
         # 開始
-        faststt.start()
+        await faststt.astart()
         logging.info("音声認識を開始しました。Ctrl+Cで停止します。")
 
         # モニタリングタスク
-        async def monitor_state():
+        async def amonitor_state():
             while not stop_event.is_set():
                 logging.info(
                     f"状態: speech_started={faststt.is_speech_started}, "
@@ -716,7 +717,7 @@ if __name__ == "__main__":
                 await asyncio.sleep(1)
 
         # モニタリングタスクを開始
-        monitor_task = asyncio.create_task(monitor_state())
+        monitor_task = asyncio.create_task(amonitor_state())
 
         # 終了イベントが設定されるまで待機
         await stop_event.wait()
@@ -730,7 +731,7 @@ if __name__ == "__main__":
 
         # 停止処理
         logging.info("停止処理を実行中...")
-        await faststt.stop()
+        await faststt.astop()
 
         logging.info("正常に終了しました")
         return 0

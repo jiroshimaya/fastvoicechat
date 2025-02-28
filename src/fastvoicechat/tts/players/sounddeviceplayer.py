@@ -16,7 +16,7 @@ class SoundDevicePlayer(BasePlayer):
         super().__init__(interval)
         self._lock = asyncio.Lock()
 
-    async def play_voice(
+    async def aplay_voice(
         self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
     ) -> bool:
         """
@@ -32,7 +32,7 @@ class SoundDevicePlayer(BasePlayer):
         async with self._lock:
             # 既存の再生があれば停止
             if self.is_playing:
-                await self.stop()
+                await self.astop()
 
             # WAVデータをNumPy配列に変換
             wav_io = io.BytesIO(content)
@@ -67,17 +67,17 @@ class SoundDevicePlayer(BasePlayer):
             # 割り込みイベントを監視しながら再生終了を待つ
             while self.is_playing:
                 if interrupt_event is not None and interrupt_event.is_set():
-                    await self.stop()
+                    await self.astop()
                     return False
                 await asyncio.sleep(self.interval)
 
             return True
         except Exception as e:
             print(f"Error in play_voice: {e}")
-            await self.stop()
+            await self.astop()
             return False
 
-    async def stop(self) -> None:
+    async def astop(self) -> None:
         """再生を停止する"""
         async with self._lock:
             if self.is_playing:
@@ -114,4 +114,4 @@ if __name__ == "__main__":
         return buffer.read()
 
     test_wav_data = create_test_wav_data()
-    asyncio.run(player.play_voice(test_wav_data))
+    asyncio.run(player.aplay_voice(test_wav_data))
