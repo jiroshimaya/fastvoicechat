@@ -211,10 +211,11 @@ class FastVoiceChat:
             already_running = False
 
         if already_running:
-            # 既にイベントループが実行中の場合は、非同期タスクとして実行
-            logging.debug("Running stop in existing event loop as a task")
-            asyncio.create_task(self.astop())
-            return
+            # 既にイベントループが実行中の場合はエラー
+            raise RuntimeError(
+                "stop は既存の asyncio イベントループの中から呼び出せません。"
+                "非同期コンテキスト内からは astop を直接使用してください。"
+            )
         else:
             # 共有イベントループを使用
             if (
@@ -222,38 +223,13 @@ class FastVoiceChat:
                 and not FastVoiceChat._shared_loop.is_closed()
             ):
                 loop = FastVoiceChat._shared_loop
-                try:
-                    loop.run_until_complete(self.astop())
-                except KeyboardInterrupt:
-                    logging.warning(
-                        "KeyboardInterrupt during stop operation. Forcing shutdown..."
-                    )
-                    # 強制的にループを停止
-                    for task in asyncio.all_tasks(loop):
-                        task.cancel()
-                    # 残りのタスクをキャンセルするための短い実行
-                    try:
-                        loop.run_until_complete(asyncio.sleep(0.1))
-                    except (asyncio.CancelledError, KeyboardInterrupt):
-                        pass
+                loop.run_until_complete(self.astop())
             else:
                 # 共有ループがない場合は一時的なループを作成
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
                     loop.run_until_complete(self.astop())
-                except KeyboardInterrupt:
-                    logging.warning(
-                        "KeyboardInterrupt during stop operation. Forcing shutdown..."
-                    )
-                    # 強制的にループを停止
-                    for task in asyncio.all_tasks(loop):
-                        task.cancel()
-                    # 残りのタスクをキャンセルするための短い実行
-                    try:
-                        loop.run_until_complete(asyncio.sleep(0.1))
-                    except (asyncio.CancelledError, KeyboardInterrupt):
-                        pass
                 finally:
                     # 一時的なループは閉じる
                     loop.close()
