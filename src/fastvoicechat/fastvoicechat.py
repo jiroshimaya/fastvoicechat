@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Tuple
 
 from fastvoicechat.base import CallbackLoop
 from fastvoicechat.llm import LLM
@@ -72,6 +72,10 @@ class FastVoiceChat:
 
         logging.debug("Initializing FastVoiceChat components...")
 
+        async def astore_voice(text: str):
+            await self.tts.aplay_voice(text, generate_only=True)
+            logging.info(f"[TTS]: stored voice: {text}")
+
         # STT用コールバック関数
         async def astt_callback(result: Dict[str, Any]):
             user_input = result.get("text", "")
@@ -82,7 +86,10 @@ class FastVoiceChat:
                 user_input
             ):
                 logging.info(f"[STT]: generation start: {user_input}")
-                await self.llm_backchannel.astart_generate_task(user_input)
+                await self.llm_backchannel.astart_generate_task(
+                    user_input,
+                    progress_callback=astore_voice,
+                )
 
         # 割り込み検出用コールバック関数
         async def ainterruption_observer_callback():
@@ -204,11 +211,10 @@ class FastVoiceChat:
             already_running = False
 
         if already_running:
-            # 既にイベントループが実行中の場合はエラー
-            raise RuntimeError(
-                "stop は既存の asyncio イベントループの中から呼び出せません。"
-                "非同期コンテキスト内からは astop を直接使用してください。"
-            )
+            # 既にイベントループが実行中の場合は、非同期タスクとして実行
+            logging.debug("Running stop in existing event loop as a task")
+            asyncio.create_task(self.astop())
+            return
         else:
             # 共有イベントループを使用
             if (
@@ -216,53 +222,41 @@ class FastVoiceChat:
                 and not FastVoiceChat._shared_loop.is_closed()
             ):
                 loop = FastVoiceChat._shared_loop
-                loop.run_until_complete(self.astop())
+                try:
+                    loop.run_until_complete(self.astop())
+                except KeyboardInterrupt:
+                    logging.warning(
+                        "KeyboardInterrupt during stop operation. Forcing shutdown..."
+                    )
+                    # 強制的にループを停止
+                    for task in asyncio.all_tasks(loop):
+                        task.cancel()
+                    # 残りのタスクをキャンセルするための短い実行
+                    try:
+                        loop.run_until_complete(asyncio.sleep(0.1))
+                    except (asyncio.CancelledError, KeyboardInterrupt):
+                        pass
             else:
                 # 共有ループがない場合は一時的なループを作成
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
                     loop.run_until_complete(self.astop())
+                except KeyboardInterrupt:
+                    logging.warning(
+                        "KeyboardInterrupt during stop operation. Forcing shutdown..."
+                    )
+                    # 強制的にループを停止
+                    for task in asyncio.all_tasks(loop):
+                        task.cancel()
+                    # 残りのタスクをキャンセルするための短い実行
+                    try:
+                        loop.run_until_complete(asyncio.sleep(0.1))
+                    except (asyncio.CancelledError, KeyboardInterrupt):
+                        pass
                 finally:
                     # 一時的なループは閉じる
                     loop.close()
-
-    async def aplay_voice(
-        self,
-        text: str,
-        pause_stt: bool = True,
-        restart_stt: bool = True,
-        interrupt_event: Optional[asyncio.Event] = None,
-    ) -> bool:
-        """
-        テキストを音声に変換して再生
-
-        Args:
-            text: 読み上げるテキスト
-            pause_stt: 音声認識を一時停止するかどうか
-            restart_stt: 再生後に音声認識を再開するかどうか
-            interrupt_event: 再生を中断するためのイベント
-
-        Returns:
-            bool: 再生が完了したかどうか（Falseなら中断された）
-        """
-        if not self.tts:
-            logging.error("TTS not initialized")
-            return False
-
-        # 音声認識の一時停止
-        if pause_stt and self.faststt and self.faststt.stt:
-            await self.faststt.stt.apause()
-
-        # 音声再生
-        start_time = time.time()
-        result = await self.tts.aplay_voice(text, interrupt_event=interrupt_event)
-
-        # 音声認識の再開
-        if restart_stt and self.faststt and self.faststt.stt:
-            await self.faststt.stt.astart_new_session()
-
-        return result
 
     async def autter_after_listening(
         self, *, add_history: bool = True, additional_utterance: str = ""
@@ -481,9 +475,15 @@ class FastVoiceChat:
                 except RuntimeError:
                     already_running = False
 
-                if (
-                    not already_running
-                    and hasattr(FastVoiceChat, "_shared_loop")
+                if already_running:
+                    # 既にイベントループが実行中の場合は何もしない
+                    # デストラクタ内では非同期タスクを作成できないため
+                    logging.debug(
+                        "Skipping cleanup in __del__ due to running event loop"
+                    )
+                    return
+                elif (
+                    hasattr(FastVoiceChat, "_shared_loop")
                     and not FastVoiceChat._shared_loop.is_closed()
                 ):
                     # 共有ループを使用してリソースを解放

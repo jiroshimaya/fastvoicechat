@@ -26,9 +26,14 @@ class TTS:
 
         # プレイヤータイプに応じたプレイヤーを選択
         self.player = SimpleAudioPlayer()
+        self.wave_contents = {}
+        self.lock = asyncio.Lock()
 
     async def aplay_voice(
-        self, text: str, interrupt_event: Optional[asyncio.Event] = None
+        self,
+        text: str,
+        interrupt_event: Optional[asyncio.Event] = None,
+        generate_only: bool = False,
     ) -> bool:
         """
         テキストを音声に変換して再生
@@ -45,7 +50,15 @@ class TTS:
 
         self.text = text
         try:
-            content = await self.synthesizer.asynthesize(text)
+            async with self.lock:
+                content = self.wave_contents.get(text)
+            if content is None:
+                content = await self.synthesizer.asynthesize(text)
+                async with self.lock:
+                    self.wave_contents[text] = content
+            if generate_only:
+                return True
+
             result = await self.player.aplay_voice(content, interrupt_event)
             await self.astop()
             return result
