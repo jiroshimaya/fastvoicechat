@@ -18,7 +18,7 @@ class PyAudioPlayer(BasePlayer):
         self._pyaudio = pyaudio.PyAudio()
         self._stream = None
 
-    async def play_voice(
+    async def aplay_voice(
         self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
     ) -> bool:
         """
@@ -34,7 +34,7 @@ class PyAudioPlayer(BasePlayer):
         async with self._lock:
             # 既存の再生があれば停止
             if self.is_playing:
-                await self.stop()
+                await self.astop()
 
             try:
                 # WAVデータを解析
@@ -54,19 +54,18 @@ class PyAudioPlayer(BasePlayer):
                 )
 
                 # 音声データを書き込む
-                async def _play():
+                async def _aplay():
                     loop = asyncio.get_event_loop()
                     if self._stream is not None:
                         await loop.run_in_executor(None, self._stream.write, frames)
                         self._stream.stop_stream()
 
-                asyncio.create_task(_play())
+                asyncio.create_task(_aplay())
 
                 # 再生が終了するまで待機
                 while self._stream.is_active():
-                    print("is_active", self._stream.is_active())
                     if interrupt_event is not None and interrupt_event.is_set():
-                        await self.stop()
+                        await self.astop()
                         return False
                     await asyncio.sleep(self.interval)
 
@@ -74,10 +73,10 @@ class PyAudioPlayer(BasePlayer):
 
             except Exception as e:
                 print(f"Error in play_voice: {e}")
-                await self.stop()
+                await self.astop()
                 return False
 
-    async def stop(self) -> None:
+    async def astop(self) -> None:
         """再生を停止する"""
         async with self._lock:
             if self._stream is not None:
@@ -114,4 +113,4 @@ if __name__ == "__main__":
         return buffer.read()
 
     test_wav_data = create_test_wav_data()
-    asyncio.run(player.play_voice(test_wav_data))
+    asyncio.run(player.aplay_voice(test_wav_data))

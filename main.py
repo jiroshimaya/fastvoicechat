@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import sys
 
 import dotenv
 
@@ -10,7 +9,7 @@ from fastvoicechat.fastvoicechat import FastVoiceChat
 dotenv.load_dotenv()
 
 
-async def async_main():
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -37,33 +36,18 @@ async def async_main():
         voicevox_host=os.getenv("VOICEVOX_HOST", "localhost:50021"),
     )
 
-    # 初期化と開始
-    await fastvoicechat.initialize()
-    fastvoicechat.start()
-
     print("Press Ctrl+C to stop.")
     try:
         while True:
-            await fastvoicechat.utter_after_listening()
+            fastvoicechat.utter_after_listening()
     except asyncio.CancelledError:
         print("Task cancelled. Stopping...")
     finally:
-        await fastvoicechat.stop()
+        fastvoicechat.stop()
 
     print("Main thread exiting.")
     return 0
 
 
-def main():
-    try:
-        exit_code = asyncio.run(async_main())
-        sys.exit(exit_code)
-    except KeyboardInterrupt:
-        print("KeyboardInterrupt detected in main(). Exiting...")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
 if __name__ == "__main__":
     main()
