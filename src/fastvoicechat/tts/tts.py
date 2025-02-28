@@ -3,11 +3,11 @@ import io
 import wave
 from typing import Optional
 
-from fastvoicechat.tts.players import SoundDevicePlayer
+from fastvoicechat.tts.players import SimpleAudioPlayer
 from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
 
 
-async def calculate_duration(content: bytes) -> float:
+def calculate_duration(content: bytes) -> float:
     """音声データの再生時間を計算する"""
     wav_io = io.BytesIO(content)
     with wave.open(wav_io, "rb") as wf:
@@ -25,9 +25,9 @@ class TTS:
         self.text = ""
 
         # プレイヤータイプに応じたプレイヤーを選択
-        self.player = SoundDevicePlayer()
+        self.player = SimpleAudioPlayer()
 
-    async def play_voice(
+    async def aplay_voice(
         self, text: str, interrupt_event: Optional[asyncio.Event] = None
     ) -> bool:
         """
@@ -45,18 +45,18 @@ class TTS:
 
         self.text = text
         try:
-            content = await self.synthesizer.synthesize(text)
-            result = await self.player.play_voice(content, interrupt_event)
-            await self.stop()
+            content = await self.synthesizer.asynthesize(text)
+            result = await self.player.aplay_voice(content, interrupt_event)
+            await self.astop()
             return result
         except Exception as e:
             print(f"Error playing voice: {e}")
-            await self.stop()
+            await self.astop()
             return False
 
-    async def stop(self) -> None:
+    async def astop(self) -> None:
         """再生を停止"""
-        await self.player.stop()
+        await self.player.astop()
         self.text = ""
 
     @property
@@ -64,13 +64,13 @@ class TTS:
         """再生中かどうか"""
         return self.player.is_playing
 
-    async def close(self):
+    async def aclose(self):
         """リソースの解放"""
-        await self.synthesizer.close()
+        await self.synthesizer.aclose()
 
 
 # 使用例
-async def main():
+async def amain():
     # 環境変数からVoiceVoxのホストを取得
     import os
 
@@ -82,12 +82,12 @@ async def main():
     tts = TTS(voicevox_host)
 
     print("音声再生を開始します...")
-    await tts.play_voice("こんにちは、世界！これは非同期TTSのテストです。")
+    await tts.aplay_voice("こんにちは、世界！これは非同期TTSのテストです。")
     print("音声再生が完了しました")
 
     # リソースの解放
-    await tts.close()
+    await tts.aclose()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(amain())

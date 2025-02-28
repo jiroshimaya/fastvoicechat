@@ -71,7 +71,7 @@ class LLM:
 
         return True
 
-    async def stop_old_tasks(self, current_time: float):
+    async def astop_old_tasks(self, current_time: float):
         """
         指定した時間より前に開始されたタスクを停止
 
@@ -82,7 +82,7 @@ class LLM:
             if task_info.start_time < current_time:
                 task_info.stop_event.set()
 
-    async def cancel_old_tasks(self, current_time: float):
+    async def acancel_old_tasks(self, current_time: float):
         """
         指定した時間より前に開始されたタスクをキャンセルして終了を待機
 
@@ -99,13 +99,13 @@ class LLM:
                     except asyncio.CancelledError:
                         pass
 
-    async def cleanup_done_tasks(self):
+    async def acleanup_done_tasks(self):
         """終了したタスクをリストから削除"""
         self.tasks = [
             task_info for task_info in self.tasks if not task_info.task.done()
         ]
 
-    async def _generate(
+    async def _agenerate(
         self,
         user_input: str,
         stop_event: asyncio.Event,
@@ -164,7 +164,7 @@ class LLM:
         if answer:
             yield answer
 
-    async def generate(
+    async def agenerate(
         self,
         user_input: str,
         stop_event: asyncio.Event,
@@ -191,7 +191,7 @@ class LLM:
             is_first = True
             answer = ""
 
-            async for chunk in self._generate(
+            async for chunk in self._agenerate(
                 user_input, stop_event, additional_messages
             ):
                 if stop_event.is_set():
@@ -207,9 +207,9 @@ class LLM:
 
                 # 最初のチャンクが来たら古いタスクを停止
                 if is_first:
-                    await self.stop_old_tasks(start_time)
-                    await self.cancel_old_tasks(start_time)
-                    await self.cleanup_done_tasks()
+                    await self.astop_old_tasks(start_time)
+                    await self.acancel_old_tasks(start_time)
+                    await self.acleanup_done_tasks()
 
                     async with self._lock:
                         self._state["previous_user_input"] = user_input
@@ -239,7 +239,7 @@ class LLM:
             logging.error(f"Error in generate: {e}")
             logging.error(traceback.format_exc())
 
-    def start_generate_task(
+    async def astart_generate_task(
         self,
         user_input: str,
         *,
@@ -262,7 +262,7 @@ class LLM:
 
         # 非同期タスクを作成
         task = asyncio.create_task(
-            self.generate(
+            self.agenerate(
                 user_input,
                 stop_event,
                 start_time,
@@ -296,7 +296,7 @@ class LLM:
         """会話履歴"""
         return self._state.get("history", [])
 
-    async def add_history(self, value: List[Tuple[str, str]]) -> None:
+    async def aadd_history(self, value: List[Tuple[str, str]]) -> None:
         """
         会話履歴に追加
 
@@ -320,12 +320,12 @@ class LLM:
         """
         return [{"role": role, "content": content} for role, content in value]
 
-    async def stop_all(self):
+    async def astop_all(self):
         """すべてのタスクを停止"""
         for task_info in self.tasks:
             task_info.stop_event.set()
 
-    async def cancel_all(self):
+    async def acancel_all(self):
         """すべてのタスクをキャンセル"""
         for task_info in self.tasks:
             task_info.stop_event.set()
@@ -336,11 +336,11 @@ class LLM:
                 except asyncio.CancelledError:
                     pass
 
-    async def reset(self):
+    async def areset(self):
         """状態をリセット"""
-        await self.stop_all()
-        await self.cancel_all()
-        await self.cleanup_done_tasks()
+        await self.astop_all()
+        await self.acancel_all()
+        await self.acleanup_done_tasks()
 
         async with self._lock:
             self._state["previous_user_input"] = ""
@@ -352,9 +352,9 @@ class LLM:
             except asyncio.QueueEmpty:
                 break
 
-    async def close(self):
+    async def aclose(self):
         """クライアントリソースを解放"""
-        await self.reset()
+        await self.areset()
         if hasattr(self, "client") and self.client:
             await self.client.close()
 
@@ -407,7 +407,7 @@ async def main():
         if llm_backchannel.should_generate(user_input):
             logging.info(f"[STT]: generation start: {user_input}")
             # 相槌生成を開始
-            llm_backchannel.start_generate_task(user_input)
+            await llm_backchannel.astart_generate_task(user_input)
 
     async def vad_callback(is_speech: bool):
         """音声活動検出のコールバック"""
@@ -446,7 +446,7 @@ async def main():
 
                 if llm_answer.should_generate(user_input):
                     # 直接start_generate_taskを呼び出し（コールバックループなし）
-                    llm_answer.start_generate_task(
+                    await llm_answer.astart_generate_task(
                         user_input, additional_messages=additional_messages
                     )
 
@@ -466,7 +466,7 @@ async def main():
 
                 # 会話履歴の更新
                 previous_user_input = llm_backchannel.previous_user_input
-                await llm_backchannel.add_history(
+                await llm_backchannel.aadd_history(
                     [
                         ("user", previous_user_input),
                         ("assistant", backchannel_answer),
@@ -474,7 +474,7 @@ async def main():
                     ]
                 )
 
-                await llm_answer.add_history(
+                await llm_answer.aadd_history(
                     [
                         ("user", previous_user_input),
                         ("assistant", backchannel_answer),
@@ -483,9 +483,9 @@ async def main():
                 )
 
                 # 状態のリセット
-                await llm_backchannel.reset()
-                await llm_answer.reset()
-                await faststt.stt.start_new_session()
+                await llm_backchannel.areset()
+                await llm_answer.areset()
+                await faststt.stt.astart_new_session()
 
     logging.info("非同期音声対話システムを初期化中...")
 
@@ -504,7 +504,7 @@ async def main():
     llm_answer = LLM(model="gpt-4o")
 
     # システム開始
-    faststt.start()
+    await faststt.astart()
     logging.info(
         "音声認識とLLMのインテグレーションを開始しました。話しかけてください..."
     )
@@ -535,9 +535,9 @@ async def main():
 
     # 終了処理
     logging.info("システムを停止中...")
-    await faststt.stop()
-    await llm_backchannel.reset()
-    await llm_answer.reset()
+    await faststt.astop()
+    await llm_backchannel.areset()
+    await llm_answer.areset()
 
     logging.info("正常に終了しました")
     return 0
