@@ -15,7 +15,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
         self._connection_retries = 3
         self._retry_delay = 1.0  # 初回リトライ待機時間（秒）
 
-    async def _get_session(self) -> aiohttp.ClientSession:
+    async def _aget_session(self) -> aiohttp.ClientSession:
         """HTTPセッションを取得（必要なら作成）"""
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(
@@ -24,7 +24,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
             )
         return self._session
 
-    async def synthesize(self, text: str, speaker_id: int = 0) -> bytes:
+    async def asynthesize(self, text: str, speaker_id: int = 0) -> bytes:
         """
         テキストからVoiceVox APIを使って音声を合成
 
@@ -35,7 +35,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
         Returns:
             bytes: WAV形式の音声データ
         """
-        session = await self._get_session()
+        session = await self._aget_session()
 
         retry_count = 0
         while retry_count <= self._connection_retries:
@@ -68,7 +68,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
                 continue
         return b""
 
-    async def get_available_speakers(self) -> list:
+    async def aget_available_speakers(self) -> list:
         """
         利用可能な話者リストを取得する
 
@@ -79,7 +79,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
         if self._speakers_cache is not None:
             return self._speakers_cache
 
-        session = await self._get_session()
+        session = await self._aget_session()
 
         retry_count = 0
         while retry_count <= self._connection_retries:
@@ -97,7 +97,7 @@ class VoiceVoxSynthesizer(BaseSynthesizer):
                 continue
         return []
 
-    async def close(self):
+    async def aclose(self):
         """HTTPセッションを閉じる"""
         if self._session and not self._session.closed:
             await self._session.close()

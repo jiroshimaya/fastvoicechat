@@ -97,7 +97,7 @@ class TestSoundDevicePlayer:
         正常に再生完了する場合のテスト。
         """
         player = SoundDevicePlayer()
-        result = await player.play_voice(test_wav_data)
+        result = await player.aplay_voice(test_wav_data)
 
         assert result is True  # 正常終了
         mock_play.assert_called_once()
@@ -123,7 +123,7 @@ class TestSoundDevicePlayer:
 
         player = SoundDevicePlayer()
         play_task = asyncio.create_task(
-            player.play_voice(test_wav_data, interrupt_event)
+            player.aplay_voice(test_wav_data, interrupt_event)
         )
 
         await asyncio.sleep(0.01)

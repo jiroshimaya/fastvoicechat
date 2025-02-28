@@ -9,7 +9,7 @@ from fastvoicechat.fastvoicechat import FastVoiceChat
 dotenv.load_dotenv()
 
 
-def main():
+async def amain():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -39,15 +39,15 @@ def main():
     print("Press Ctrl+C to stop.")
     try:
         while True:
-            fastvoicechat.utter_after_listening()
+            await fastvoicechat.autter_after_listening()
     except asyncio.CancelledError:
         print("Task cancelled. Stopping...")
     finally:
-        fastvoicechat.stop()
+        await fastvoicechat.astop()
 
     print("Main thread exiting.")
     return 0
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(amain())
