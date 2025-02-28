@@ -3,7 +3,7 @@ import logging
 import traceback
 
 
-class AsyncCallbackLoop:
+class CallbackLoop:
     """AsyncCallbackLoopクラス - 非同期��ー����ンのCallbackLoop"""
 
     def __init__(
