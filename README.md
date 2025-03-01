@@ -20,7 +20,7 @@
 - voicevoxを起動する
 
 ```sh
-git clone [url]
+git clone https://github.com/jiroshimaya/fastvoicechat.git
 # 必要ならpipの前に仮想環境作成
 cd fastvoicechat
 # 環境変数ファイルをコピーして、voicevox、openai api、google stt用のjsonの情報を記入
@@ -40,9 +40,19 @@ PCに話しかけて返答が再生されれば成功。
 基本的には非同期処理で扱うことをおすすめします。
 `autter_after_listening`によって、ユーザの発話に対し高速に音声応答することができます。
 
+```
+pip install git+https://github.com/jiroshimaya/fastvoicechat.git
+```
+
+
 ```Python
 import asyncio
+import os
+import dotenv
+
 from fastvoicechat import FastVoiceChat
+
+dotenv.load_dotenv()
 
 async def amain():
     fastvoicechat = FastVoiceChat(allow_interrupt=False)
@@ -59,7 +69,13 @@ if __name__ == "__main__":
 `utter_after_listening`はイベントループを内部で生成するため、非同期関数の内側で実行するとエラーになりますので、注意してください。
 
 ```Python
+import asyncio
+import os
+import dotenv
+
 from fastvoicechat import FastVoiceChat
+
+dotenv.load_dotenv()
 
 def main():
     fastvoicechat = FastVoiceChat(allow_interrupt=False)
