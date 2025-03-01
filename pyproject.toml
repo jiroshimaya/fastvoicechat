@@ -18,9 +18,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "setuptools>=75.8.0",
     "simpleaudio>=1.0.4",
-    "sounddevice>=0.5.1",
     "webrtcvad>=2.0.10",
-    "soundfile>=0.13.1",
 ]
 
 [build-system]
@@ -30,3 +28,8 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 # pytestのwarningを消すための対応
 asyncio_default_fixture_loop_scope = "function"  # または "class", "module", "package", "session" のいずれか
+
+[dependency-groups]
+dev = [
+    "sounddevice>=0.5.1",
+]
