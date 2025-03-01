@@ -69,7 +69,6 @@ if __name__ == "__main__":
 `utter_after_listening`はイベントループを内部で生成するため、非同期関数の内側で実行するとエラーになりますので、注意してください。
 
 ```Python
-import asyncio
 import os
 import dotenv
 
@@ -85,7 +84,7 @@ def main():
     fastvoicechat.stop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 ```
 
 # システム解説
