@@ -11,6 +11,7 @@
 https://github.com/user-attachments/assets/623b4349-6ac5-4971-bfd9-45826ab667a8
 
 # 使い方
+
 ## 環境
 以下で動作確認済み。windowsやubuntu、M1以外のmacでは正しく動作しない可能性があります。特にthreadやaudio関係の処理がOS依存性が強そうです。
 
@@ -18,8 +19,11 @@ https://github.com/user-attachments/assets/623b4349-6ac5-4971-bfd9-45826ab667a8
 - python 3.11
 
 ## 準備
+Google音声認識とOpenAI APIについては料金がかかりますので御理解の上、以降を実行してください。
 
-- voicevoxを起動する
+- voicevoxを起動する（[参考](https://voicevox.hiroshiba.jp/how_to_use/)）
+- Google音声認識用の認証情報jsonを入手する（[参考](https://qiita.com/kodai_ari/items/f8505b51ad0a70351c43)）。
+- OpenAI API keyを入手する（[参考](https://qiita.com/kurata04/items/a10bdc44cc0d1e62dad3)）。
 
 ```sh
 git clone https://github.com/jiroshimaya/fastvoicechat.git
