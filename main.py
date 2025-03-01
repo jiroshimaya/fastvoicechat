@@ -16,7 +16,7 @@ def main():
     parser.add_argument(
         "--speaker", "-s", type=str, default="pc", choices=["pc", "robot", "winsound"]
     )
-    parser.add_argument("--disable-interrupt", "-d", action="store_true", default=False)
+    parser.add_argument("--allow-interrupt", "-a", action="store_true", default=False)
     parser.add_argument(
         "--loglevel",
         "-l",
@@ -32,7 +32,7 @@ def main():
     logging.debug("Creating AsyncFastVoiceChat instance...")
     fastvoicechat = FastVoiceChat(
         speaker=args.speaker,
-        allow_interrupt=not args.disable_interrupt,
+        allow_interrupt=args.allow_interrupt,
         voicevox_host=os.getenv("VOICEVOX_HOST", "localhost:50021"),
     )
 
