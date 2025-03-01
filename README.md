@@ -30,7 +30,7 @@ cp .env_sample .env
 ## 起動
 
 ```sh
-uv run main.py [--disable_interrupt] [--use-async]
+uv run main.py [--allow-interrupt]
 ```
 
 PCに話しかけて返答が再生されれば成功。

@@ -13,9 +13,7 @@ async def amain():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--speaker", "-s", type=str, default="pc", choices=["pc", "robot", "winsound"]
-    )
+    # parser.add_argument("--speaker", "-s", type=str, default="pc", choices=["pc"])
     parser.add_argument("--allow-interrupt", "-a", action="store_true", default=False)
     parser.add_argument(
         "--loglevel",
