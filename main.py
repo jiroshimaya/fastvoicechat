@@ -5,6 +5,9 @@ import os
 import dotenv
 
 from fastvoicechat.fastvoicechat import FastVoiceChat
+from fastvoicechat.tts import TTS
+from fastvoicechat.tts.players import SimpleAudioPlayer
+from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
 
 dotenv.load_dotenv()
 
@@ -27,11 +30,18 @@ def main():
 
     logging.basicConfig(level=getattr(logging, args.loglevel.upper(), None))
 
+    # TTSインスタンスを作成
+    tts = TTS(
+        synthesizer=VoiceVoxSynthesizer(
+            host=os.getenv("VOICEVOX_HOST", "localhost:50021")
+        ),
+        player=SimpleAudioPlayer(),
+    )
+
     logging.debug("Creating AsyncFastVoiceChat instance...")
     fastvoicechat = FastVoiceChat(
-        speaker=args.speaker,
+        tts=tts,
         allow_interrupt=args.allow_interrupt,
-        voicevox_host=os.getenv("VOICEVOX_HOST", "localhost:50021"),
     )
 
     print("Press Ctrl+C to stop.")

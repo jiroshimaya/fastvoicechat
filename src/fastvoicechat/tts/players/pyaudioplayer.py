@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import pyaudio
 
-from fastvoicechat.tts.base import BasePlayer
+from fastvoicechat.tts.players.base import BasePlayer
 
 
 class PyAudioPlayer(BasePlayer):
@@ -36,16 +36,17 @@ class PyAudioPlayer(BasePlayer):
             if self.is_playing:
                 await self.astop()
 
-            try:
-                # WAVデータを解析
-                wav_io = io.BytesIO(content)
-                with wave.open(wav_io, "rb") as wf:
-                    channels = wf.getnchannels()
-                    sample_width = wf.getsampwidth()
-                    sample_rate = wf.getframerate()
-                    frames = wf.readframes(wf.getnframes())
+        try:
+            # WAVデータを解析
+            wav_io = io.BytesIO(content)
+            with wave.open(wav_io, "rb") as wf:
+                channels = wf.getnchannels()
+                sample_width = wf.getsampwidth()
+                sample_rate = wf.getframerate()
+                frames = wf.readframes(wf.getnframes())
 
-                # ストリームを開く
+            # ストリームを開く
+            async with self._lock:
                 self._stream = self._pyaudio.open(
                     format=self._pyaudio.get_format_from_width(sample_width),
                     channels=channels,
@@ -53,36 +54,40 @@ class PyAudioPlayer(BasePlayer):
                     output=True,
                 )
 
-                # 音声データを書き込む
-                async def _aplay():
-                    loop = asyncio.get_event_loop()
-                    if self._stream is not None:
-                        await loop.run_in_executor(None, self._stream.write, frames)
-                        self._stream.stop_stream()
+            # 音声データを書き込む
+            async def _aplay():
+                loop = asyncio.get_event_loop()
+                if self._stream is not None:
+                    await loop.run_in_executor(None, self._stream.write, frames)
+                    self._stream.stop_stream()
 
-                asyncio.create_task(_aplay())
+            asyncio.create_task(_aplay())
 
-                # 再生が終了するまで待機
-                while self._stream.is_active():
-                    if interrupt_event is not None and interrupt_event.is_set():
-                        await self.astop()
-                        return False
-                    await asyncio.sleep(self.interval)
+            # 再生が終了するまで待機
+            while self._stream.is_active():
+                if interrupt_event is not None and interrupt_event.is_set():
+                    await self.astop()
+                    return False
+                await asyncio.sleep(self.interval)
 
-                return True
+            return True
 
-            except Exception as e:
-                print(f"Error in play_voice: {e}")
-                await self.astop()
-                return False
+        except Exception as e:
+            print(f"Error in play_voice: {e}")
+            await self.astop()
+            return False
 
     async def astop(self) -> None:
         """再生を停止する"""
         async with self._lock:
-            if self._stream is not None:
-                self._stream.stop_stream()
-                self._stream.close()
-                self._stream = None
+            if self._stream is not None and not self._stream.is_stopped():
+                try:
+                    # pyaudioのストリーム停止は標準的なやり方がなさそう
+                    # エラーが出るが中断はできるようなのでこれでいく
+                    self._stream.stop_stream()
+                    self._stream.close()
+                finally:
+                    self._stream = None
 
     @property
     def is_playing(self) -> bool:
@@ -113,4 +118,5 @@ if __name__ == "__main__":
         return buffer.read()
 
     test_wav_data = create_test_wav_data()
+
     asyncio.run(player.aplay_voice(test_wav_data))

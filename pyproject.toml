@@ -19,6 +19,8 @@ dependencies = [
     "setuptools>=75.8.0",
     "simpleaudio>=1.0.4",
     "webrtcvad>=2.0.10",
+    "scipy>=1.15.2",
+    "pyopenjtalk-plus>=0.3.4.post11",
 ]
 
 [build-system]
