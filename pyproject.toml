@@ -1,6 +1,6 @@
 [project]
 name = "fastvoicechat"
-version = "0.0.0"
+dynamic = ["version"]
 description = "高速音声対話のデモプログラム"
 readme = "README.md"
 authors = [
@@ -22,10 +22,20 @@ dependencies = [
     "scipy>=1.15.2",
     "pyopenjtalk-plus>=0.3.4.post11",
 ]
+license = "Apache-2.0"
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+urls = { "Homepage" = "https://github.com/jiroshimaya/fastvoicechat" }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.pytest.ini_options]
 # pytestのwarningを消すための対応
@@ -33,5 +43,20 @@ asyncio_default_fixture_loop_scope = "function"  # または "class", "module", 
 
 [dependency-groups]
 dev = [
+    "mypy>=1.15.0",
     "sounddevice>=0.5.1",
+    "taskipy>=1.14.1",
+    "types-requests>=2.32.0.20250306",
 ]
+
+[tool.taskipy.tasks]
+test-workflow-py = "pytest -m 'workflow' --override-ini=addopts="
+test-workflow = "bats tests/workflow/test_workflow.bats"
+act-sample = "act -j publish -W .github/workflows/publish-to-testpypi.yaml -e tests/workflow/event.json"
+test = "pytest"
+lint = "uvx ruff check ."
+format = "uvx ruff format ."
+
+[tool.mypy]
+# スタブが無いパッケージのエラーは無視させる.サードパーティのライブラリに型情報がないケースもあるため
+ignore_missing_imports = true
