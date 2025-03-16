@@ -3,8 +3,8 @@ import io
 import wave
 from typing import Optional
 
-from fastvoicechat.tts.players import SimpleAudioPlayer
-from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
+from fastvoicechat.tts.players.base import BasePlayer
+from fastvoicechat.tts.synthesizers.base import BaseSynthesizer
 
 
 def calculate_duration(content: bytes) -> float:
@@ -20,12 +20,13 @@ def calculate_duration(content: bytes) -> float:
 class TTS:
     """非同期テキスト読み上げクラス"""
 
-    def __init__(self, voicevox_host: str = "localhost:50021"):
-        self.synthesizer = VoiceVoxSynthesizer(voicevox_host)
+    def __init__(self, synthesizer: BaseSynthesizer, player: BasePlayer):
+        # self.synthesizer = VoiceVoxSynthesizer(voicevox_host)
+        self.synthesizer = synthesizer
         self.text = ""
 
         # プレイヤータイプに応じたプレイヤーを選択
-        self.player = SimpleAudioPlayer()
+        self.player = player
 
     async def aplay_voice(
         self, text: str, interrupt_event: Optional[asyncio.Event] = None
@@ -69,25 +70,27 @@ class TTS:
         await self.synthesizer.aclose()
 
 
-# 使用例
-async def amain():
-    # 環境変数からVoiceVoxのホストを取得
-    import os
-
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    voicevox_host = os.getenv("VOICEVOX_HOST", "localhost:50021")
-    tts = TTS(voicevox_host)
-
-    print("音声再生を開始します...")
-    await tts.aplay_voice("こんにちは、世界！これは非同期TTSのテストです。")
-    print("音声再生が完了しました")
-
-    # リソースの解放
-    await tts.aclose()
-
-
 if __name__ == "__main__":
+    # 使用例
+    async def amain():
+        # 環境変数からVoiceVoxのホストを取得
+
+        from dotenv import load_dotenv
+
+        from fastvoicechat.tts.players import SimpleAudioPlayer
+        from fastvoicechat.tts.synthesizers import PyOpenJTalkSynthesizer
+
+        load_dotenv()
+
+        synthesizer = PyOpenJTalkSynthesizer()
+        player = SimpleAudioPlayer()
+        tts = TTS(synthesizer, player)
+
+        print("音声再生を開始します...")
+        await tts.aplay_voice("こんにちは、世界！これは非同期TTSのテストです。")
+        print("音声再生が完了しました")
+
+        # リソースの解放
+        await tts.aclose()
+
     asyncio.run(amain())
