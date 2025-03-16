@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import simpleaudio
 
-from fastvoicechat.tts.base import BasePlayer
+from fastvoicechat.tts.players.base import BasePlayer
 
 
 class SimpleAudioPlayer(BasePlayer):

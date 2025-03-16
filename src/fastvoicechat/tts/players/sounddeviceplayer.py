@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 
-from fastvoicechat.tts.base import BasePlayer
+from fastvoicechat.tts.players.base import BasePlayer
 
 
 class SoundDevicePlayer(BasePlayer):
