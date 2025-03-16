@@ -1,0 +1,60 @@
+name: PublishToTestPyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version (must follow semantic versioning and start with 'v')
+        required: false
+        type: string
+      recreate:
+        description: Recreate Tag
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: Dry Run
+        required: false
+        default: false
+        type: boolean
+
+env:
+  TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Fetch Tags
+      if: ${{ inputs.version == '' && inputs.recreate == false }}
+      run: git fetch --tags
+
+    - name: Update Version
+      if: ${{ inputs.version != '' || inputs.recreate == true }}
+      run: |
+        args=""
+        if [ -n "${{ inputs.version }}" ]; then
+          args="$args -v ${{ inputs.version }}"
+        fi
+        if [ "${{ inputs.recreate }}" = "true" ]; then
+          args="$args -r"
+        fi
+        if [ "${{ inputs.dry_run }}" = "true" ]; then
+          args="$args -n"
+        fi
+        bash .github/scripts/update_version.sh $args
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+
+    - name: Build
+      run: uv build
+
+    - name: Publish to TestPyPI
+      if: ${{ !inputs.dry_run }}
+      run: uv publish --publish-url https://test.pypi.org/legacy/ --token ${{ env.TEST_PYPI_TOKEN }}

@@ -250,7 +250,6 @@ class FastVoiceChat:
             await self.faststt.stt.apause()
 
         # 音声再生
-        start_time = time.time()
         result = await self.tts.aplay_voice(text, interrupt_event=interrupt_event)
 
         # 音声認識の再開
@@ -471,7 +470,7 @@ class FastVoiceChat:
             try:
                 # 既存のasyncioイベントループがあるかチェック
                 try:
-                    loop = asyncio.get_running_loop()
+                    asyncio.get_running_loop()
                     already_running = True
                 except RuntimeError:
                     already_running = False
