@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastvoicechat.base import CallbackLoop
 from fastvoicechat.llm import LLM
@@ -31,16 +31,14 @@ class FastVoiceChat:
     def __init__(
         self,
         *,
-        speaker: Literal["pc"] = "pc",
-        voicevox_host: str = "localhost:50021",
+        tts: TTS,
         allow_interrupt: bool = True,
         backchannel_system_prompt: str = BACKCHANNEL_SYSTEM_PROMPT,
         answer_system_prompt: str = ANSWER_SYSTEM_PROMPT,
         backchannel_model: str = "gpt-4o-mini",
         answer_model: str = "gpt-4o",
     ):
-        self.speaker: Literal["pc"] = speaker
-        self.voicevox_host = voicevox_host
+        self.tts = tts
         self.allow_interrupt = allow_interrupt
 
         self.backchannel_system_prompt = backchannel_system_prompt
@@ -52,7 +50,6 @@ class FastVoiceChat:
         self.faststt: FastSTT
         self.llm_backchannel: LLM
         self.llm_answer: LLM
-        self.tts: TTS
 
         # 割り込み制御
         self.interrupt_event = asyncio.Event()
@@ -132,9 +129,7 @@ class FastVoiceChat:
             system_prompt=self.answer_system_prompt, model=self.answer_model
         )
 
-        logging.debug("Initializing AsyncTTS...")
-        self.tts = TTS(voicevox_host=self.voicevox_host)
-
+        # TTSの初期化部分を削除
         self._initialized = True
         logging.debug("AsyncFastVoiceChat initialization complete")
 

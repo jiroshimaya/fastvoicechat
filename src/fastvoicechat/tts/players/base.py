@@ -36,36 +36,3 @@ class BasePlayer(ABC):
     def is_playing(self) -> bool:
         """再生中かどうかを返す"""
         return False
-
-
-class BaseSynthesizer(ABC):
-    """音声合成の抽象基底クラス"""
-
-    @abstractmethod
-    async def asynthesize(self, text: str, speaker_id: int = 0) -> bytes:
-        """
-        テキストから音声を合成する
-
-        Args:
-            text: 読み上げるテキスト
-            speaker_id: 話者ID
-
-        Returns:
-            bytes: WAV形式の音声データ
-        """
-        pass
-
-    @abstractmethod
-    async def aget_available_speakers(self) -> list:
-        """
-        利用可能な話者リストを取得する
-
-        Returns:
-            list: 話者情報のリスト
-        """
-        pass
-
-    @abstractmethod
-    async def aclose(self):
-        """リソースを解放する"""
-        pass
