@@ -1,0 +1,23 @@
+name: Auto Update Version
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.py'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Fetch Tags
+      run: git fetch --tags
+
+    - name: Update Version
+      run: |
+        # パッチバージョンを1つ上げる
+        bash .github/scripts/update_version.sh -i patch 
