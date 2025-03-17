@@ -1,3 +1,3 @@
-from fastvoicechat.llm.llm import LLM
+from .llm import LLM
 
 __all__ = ["LLM"]

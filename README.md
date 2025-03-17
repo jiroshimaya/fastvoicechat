@@ -50,18 +50,26 @@ PCに話しかけて返答が再生されれば成功。
 pip install git+https://github.com/jiroshimaya/fastvoicechat.git
 ```
 
-
 ```Python
 import asyncio
 import os
 import dotenv
 
-from fastvoicechat import FastVoiceChat
+from fastvoicechat.fvchat import create_fastvoicechat
 
 dotenv.load_dotenv()
 
 async def amain():
-    fastvoicechat = FastVoiceChat(allow_interrupt=False)
+    fastvoicechat = create_fastvoicechat(
+        tts_kwargs={
+            "synthesizer_type": "voicevox",
+            "synthesizer_kwargs": {
+                "host": os.getenv("VOICEVOX_HOST")
+            },
+        },
+        stt_kwargs={"recognition_type": "googlespeech"},
+        allow_interrupt=False
+    )
     print("喋って!")
     await fastvoicechat.autter_after_listening()
     print("終了")
@@ -78,12 +86,21 @@ if __name__ == "__main__":
 import os
 import dotenv
 
-from fastvoicechat import FastVoiceChat
+from fastvoicechat.fvchat import create_fastvoicechat
 
 dotenv.load_dotenv()
 
 def main():
-    fastvoicechat = FastVoiceChat(allow_interrupt=False)
+    fastvoicechat = create_fastvoicechat(
+        tts_kwargs={
+            "synthesizer_type": "voicevox",
+            "synthesizer_kwargs": {
+                "host": os.getenv("VOICEVOX_HOST")
+            },
+        },
+        stt_kwargs={"recognition_type": "googlespeech"},
+        allow_interrupt=False
+    )
     print("喋って!")
     fastvoicechat.utter_after_listening()
     print("終了")

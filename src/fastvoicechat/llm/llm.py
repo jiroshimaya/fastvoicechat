@@ -374,7 +374,7 @@ async def main():
     コールバックループを使わないシンプルな実装
     """
 
-    from fastvoicechat.stt import FastSTT
+    from fastvoicechat.stt import create_stt
 
     # ロギング設定
     logging.basicConfig(
@@ -399,7 +399,7 @@ async def main():
     processing_lock = asyncio.Lock()
 
     # 各コンポーネントの作成
-    async def stt_callback(result: Dict[str, Any]):
+    async def recognition_callback(result: Dict[str, Any]):
         """音声認識結果のコールバック"""
         user_input = result.get("text", "")
         logging.info(f"[STT]: {user_input}")
@@ -412,7 +412,7 @@ async def main():
     async def vad_callback(is_speech: bool):
         """音声活動検出のコールバック"""
         # 必要な場合のみ処理を実行（沈黙が10フレーム以上続き、テキストが存在する場合）
-        if not is_speech and faststt.vad.silence_count >= 10 and faststt.stt.text:
+        if not is_speech and faststt.vad.silence_count >= 10 and faststt.text:
             # 沈黙検出時の処理
             await process_vad_silence()
 
@@ -439,7 +439,7 @@ async def main():
                 )
 
                 # 本回答の生成 - スレッド版と同様に直接呼び出し
-                user_input = faststt.stt.text
+                user_input = faststt.text
                 additional_messages = None
                 if backchannel_answer:
                     additional_messages = [("assistant", backchannel_answer)]
@@ -485,12 +485,17 @@ async def main():
                 # 状態のリセット
                 await llm_backchannel.areset()
                 await llm_answer.areset()
-                await faststt.stt.astart_new_session()
+                await faststt.recognition.astart_new_session()
 
     logging.info("非同期音声対話システムを初期化中...")
 
     # FastSTTの作成
-    faststt = FastSTT(stt_callback=stt_callback, vad_callback=vad_callback)
+    faststt = create_stt(
+        recognition_type="vosk",
+        vad_type="webrtcvad",
+        recognition_kwargs={"callback": recognition_callback},
+        vad_kwargs={"callback": vad_callback},
+    )
 
     # LLMの作成
     backchannel_system_prompt = (
@@ -516,7 +521,7 @@ async def main():
             logging.debug(
                 f"状態: speech_started={faststt.is_speech_started}, "
                 f"speech_ended={faststt.is_speech_ended}, "
-                f"text='{faststt.stt.text}'"
+                f"text='{faststt.text}'"
             )
             await asyncio.sleep(3)  # 3秒ごとに状態を表示
 
