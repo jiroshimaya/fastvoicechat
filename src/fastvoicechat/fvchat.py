@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from fastvoicechat.base import CallbackLoop
 from fastvoicechat.llm import LLM
-from fastvoicechat.stt import FastSTT
-from fastvoicechat.tts import TTS
+from fastvoicechat.stt import STT, create_stt
+from fastvoicechat.tts import TTS, create_tts
 
 # スレッド版と同じシステムプロンプトを使用
 BACKCHANNEL_SYSTEM_PROMPT = (
@@ -32,6 +32,7 @@ class FastVoiceChat:
         self,
         *,
         tts: TTS,
+        stt_kwargs: Dict[str, Any] = {},
         allow_interrupt: bool = True,
         backchannel_system_prompt: str = BACKCHANNEL_SYSTEM_PROMPT,
         answer_system_prompt: str = ANSWER_SYSTEM_PROMPT,
@@ -47,7 +48,8 @@ class FastVoiceChat:
         self.answer_model = answer_model
 
         # 各コンポーネントの初期化
-        self.faststt: FastSTT
+        self.stt: STT
+        self.stt_kwargs = stt_kwargs
         self.llm_backchannel: LLM
         self.llm_answer: LLM
 
@@ -70,7 +72,7 @@ class FastVoiceChat:
         logging.debug("Initializing FastVoiceChat components...")
 
         # STT用コールバック関数
-        async def astt_callback(result: Dict[str, Any]):
+        async def arecognition_callback(result: Dict[str, Any]):
             user_input = result.get("text", "")
             logging.info(f"[STT]: {user_input}")
 
@@ -87,8 +89,8 @@ class FastVoiceChat:
 
             # 割り込みを検出: ユーザが話し始めた & TTSが再生中
             interrupted = (
-                self.faststt
-                and self.faststt.is_speech_started
+                self.stt
+                and self.stt.is_speech_started
                 and self.tts
                 and self.tts.is_playing
             )
@@ -108,7 +110,12 @@ class FastVoiceChat:
 
         # 各コンポーネントの初期化
         logging.debug("Setting up AsyncFastSTT...")
-        self.faststt = FastSTT(stt_callback=astt_callback)
+        stt_kwargs = self.stt_kwargs.copy()
+        stt_kwargs["recognition_kwargs"] = {
+            **stt_kwargs.get("recognition_kwargs", {}),
+            "callback": arecognition_callback,
+        }
+        self.stt = create_stt(**stt_kwargs)
 
         logging.debug("Setting up AsyncCallbackLoop for interruption observer...")
         self.interruption_observer = CallbackLoop(
@@ -142,8 +149,8 @@ class FastVoiceChat:
         logging.debug("Starting AsyncFastVoiceChat components...")
 
         # 各コンポーネントを起動
-        if self.faststt:
-            await self.faststt.astart()
+        if self.stt:
+            await self.stt.astart()
 
         if self.interruption_observer:
             await self.interruption_observer.astart()
@@ -158,8 +165,8 @@ class FastVoiceChat:
         )
 
         # 各コンポーネントの停止
-        if self.faststt:
-            await self.faststt.astop()
+        if self.stt:
+            await self.stt.astop()
 
         if self.interruption_observer:
             await self.interruption_observer.astop()
@@ -246,15 +253,15 @@ class FastVoiceChat:
             return False
 
         # 音声認識の一時停止
-        if pause_stt and self.faststt and self.faststt.stt:
-            await self.faststt.stt.apause()
+        if pause_stt and self.stt and self.stt.recognition:
+            await self.stt.recognition.apause()
 
         # 音声再生
         result = await self.tts.aplay_voice(text, interrupt_event=interrupt_event)
 
         # 音声認識の再開
-        if restart_stt and self.faststt and self.faststt.stt:
-            await self.faststt.stt.astart_new_session()
+        if restart_stt and self.stt and self.stt.recognition:
+            await self.stt.recognition.astart_new_session()
 
         return result
 
@@ -278,7 +285,7 @@ class FastVoiceChat:
             await self.astart()
 
         # 発話終了を待機
-        while not self.faststt.is_speech_ended:
+        while not self.stt.is_speech_ended:
             await asyncio.sleep(0.01)
 
         # 割り込みイベントをクリア
@@ -298,11 +305,10 @@ class FastVoiceChat:
         logging.info(f"[LLM Backchannel]: {backchannel_text} -> {backchannel_answer}")
 
         # 相槌再生前に音声認識を一時停止
-        await self.faststt.stt.apause()
+        await self.stt.recognition.apause()
 
         async with self.processing_lock:
-            # 本回答の生成に必要な情報を準備
-            user_input = self.faststt.stt.text
+            user_input = self.stt.recognition.text
 
         additional_messages = None
         if backchannel_answer:
@@ -402,7 +408,7 @@ class FastVoiceChat:
 
         await self.llm_backchannel.areset()
         await self.llm_answer.areset()
-        await self.faststt.stt.astart_new_session()
+        await self.stt.recognition.astart_new_session()
         self.interrupt_event.clear()
 
         return new_history
@@ -485,3 +491,42 @@ class FastVoiceChat:
             except Exception as e:
                 logging.error(f"Error in __del__: {e}")
                 # デストラクタ内のエラーは無視
+
+
+def create_fastvoicechat(
+    *,
+    tts_kwargs: Dict[str, Any] = {},
+    stt_kwargs: Dict[str, Any] = {},
+    **kwargs,
+) -> FastVoiceChat:
+    tts = create_tts(**tts_kwargs)
+    return FastVoiceChat(tts=tts, stt_kwargs=stt_kwargs, **kwargs)
+
+
+if __name__ == "__main__":
+    import os
+
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
+
+    async def main():
+        fastvoicechat = create_fastvoicechat(
+            tts_kwargs={
+                "synthesizer_type": "voicevox",
+                "synthesizer_kwargs": {
+                    "host": os.getenv("VOICEVOX_HOST", "http://localhost:50021")
+                },
+                "player_type": "simpleaudio",
+            },
+            stt_kwargs={"recognition_type": "vosk", "vad_type": "webrtcvad"},
+        )
+
+        await fastvoicechat.astart()
+
+        while True:
+            print("waiting...")
+
+            await fastvoicechat.autter_after_listening()
+
+    asyncio.run(main())

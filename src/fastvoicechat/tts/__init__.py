@@ -1,3 +1,3 @@
-from fastvoicechat.tts.tts import TTS
+from .tts import TTS, create_tts
 
-__all__ = ["TTS"]
+__all__ = ["TTS", "create_tts"]

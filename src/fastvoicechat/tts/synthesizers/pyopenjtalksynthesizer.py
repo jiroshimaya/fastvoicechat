@@ -10,7 +10,7 @@ from fastvoicechat.tts.synthesizers.base import BaseSynthesizer
 class PyOpenJTalkSynthesizer(BaseSynthesizer):
     """pyopenjtalkを非同期で扱うクラス"""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         pass
 
     async def asynthesize(self, text: str) -> bytes:
