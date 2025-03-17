@@ -1,0 +1,2 @@
+# uv addに失敗するのでuv pipでインストール
+vosk
