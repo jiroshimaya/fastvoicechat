@@ -4,10 +4,7 @@ import os
 
 import dotenv
 
-from fastvoicechat.fastvoicechat import FastVoiceChat
-from fastvoicechat.tts import TTS
-from fastvoicechat.tts.players import SimpleAudioPlayer
-from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
+from fastvoicechat.fvchat import create_fastvoicechat
 
 dotenv.load_dotenv()
 
@@ -31,16 +28,22 @@ def main():
     logging.basicConfig(level=getattr(logging, args.loglevel.upper(), None))
 
     # TTSインスタンスを作成
-    tts = TTS(
-        synthesizer=VoiceVoxSynthesizer(
-            host=os.getenv("VOICEVOX_HOST", "localhost:50021")
-        ),
-        player=SimpleAudioPlayer(),
-    )
-
     logging.debug("Creating AsyncFastVoiceChat instance...")
-    fastvoicechat = FastVoiceChat(
-        tts=tts,
+    fastvoicechat = create_fastvoicechat(
+        tts_kwargs={
+            "synthesizer_type": os.getenv("SYNTHESIZER_TYPE", "voicevox"),
+            "synthesizer_kwargs": {
+                "host": os.getenv("VOICEVOX_HOST", "http://localhost:50021")
+            },
+            "player_type": os.getenv("PLAYER_TYPE", "simpleaudio"),
+        },
+        stt_kwargs={
+            "recognition_type": os.getenv("RECOGNITION_TYPE", "googlespeech"),
+            # "recognition_kwargs": {
+            #    "model_path": "model",
+            # },
+            "vad_type": os.getenv("VAD_TYPE", "webrtcvad"),
+        },
         allow_interrupt=args.allow_interrupt,
     )
 
