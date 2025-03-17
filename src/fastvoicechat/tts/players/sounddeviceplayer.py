@@ -12,7 +12,7 @@ from fastvoicechat.tts.players.base import BasePlayer
 class SoundDevicePlayer(BasePlayer):
     """sounddeviceを使った非同期オーディオプレイヤー"""
 
-    def __init__(self, interval: float = 0.01):
+    def __init__(self, interval: float = 0.01, **kwargs):
         super().__init__(interval)
         self._lock = asyncio.Lock()
 

@@ -8,7 +8,7 @@ from fastvoicechat.tts.synthesizers.base import BaseSynthesizer
 class VoiceVoxSynthesizer(BaseSynthesizer):
     """VoiceVoxのHTTP APIを非同期で扱うクラス"""
 
-    def __init__(self, host="http://localhost:50021", speaker_id: int = 0):
+    def __init__(self, host="http://localhost:50021", speaker_id: int = 0, **kwargs):
         self.host = host if host.startswith("http") else f"http://{host}"
         self._session = None
         self._speakers_cache = None
