@@ -1,10 +1,9 @@
 import asyncio
 import logging
-import os
 
 import dotenv
 
-from fastvoicechat.fvchat import create_fastvoicechat
+from fastvoicechat import create_fastvoicechat
 
 dotenv.load_dotenv()
 
@@ -13,8 +12,6 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--speaker", "-s", type=str, default="pc", choices=["pc"])
-    parser.add_argument("--allow-interrupt", "-a", action="store_true", default=False)
     parser.add_argument(
         "--loglevel",
         "-l",
@@ -29,23 +26,7 @@ def main():
 
     # TTSインスタンスを作成
     logging.debug("Creating AsyncFastVoiceChat instance...")
-    fastvoicechat = create_fastvoicechat(
-        tts_kwargs={
-            "synthesizer_type": os.getenv("SYNTHESIZER_TYPE", "voicevox"),
-            "synthesizer_kwargs": {
-                "host": os.getenv("VOICEVOX_HOST", "http://localhost:50021")
-            },
-            "player_type": os.getenv("PLAYER_TYPE", "simpleaudio"),
-        },
-        stt_kwargs={
-            "recognition_type": os.getenv("RECOGNITION_TYPE", "googlespeech"),
-            # "recognition_kwargs": {
-            #    "model_path": "model",
-            # },
-            "vad_type": os.getenv("VAD_TYPE", "webrtcvad"),
-        },
-        allow_interrupt=args.allow_interrupt,
-    )
+    fastvoicechat = create_fastvoicechat()
 
     print("Press Ctrl+C to stop.")
     try:

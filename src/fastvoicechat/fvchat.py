@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from fastvoicechat.base import CallbackLoop
 from fastvoicechat.llm import LLM
 from fastvoicechat.stt import STT, create_stt
-from fastvoicechat.tts import TTS, create_tts
+from fastvoicechat.tts import TTS
 
 # スレッド版と同じシステムプロンプトを使用
 BACKCHANNEL_SYSTEM_PROMPT = (
@@ -491,42 +491,3 @@ class FastVoiceChat:
             except Exception as e:
                 logging.error(f"Error in __del__: {e}")
                 # デストラクタ内のエラーは無視
-
-
-def create_fastvoicechat(
-    *,
-    tts_kwargs: Dict[str, Any] = {},
-    stt_kwargs: Dict[str, Any] = {},
-    **kwargs,
-) -> FastVoiceChat:
-    tts = create_tts(**tts_kwargs)
-    return FastVoiceChat(tts=tts, stt_kwargs=stt_kwargs, **kwargs)
-
-
-if __name__ == "__main__":
-    import os
-
-    from dotenv import load_dotenv
-
-    load_dotenv(override=True)
-
-    async def main():
-        fastvoicechat = create_fastvoicechat(
-            tts_kwargs={
-                "synthesizer_type": "voicevox",
-                "synthesizer_kwargs": {
-                    "host": os.getenv("VOICEVOX_HOST", "http://localhost:50021")
-                },
-                "player_type": "simpleaudio",
-            },
-            stt_kwargs={"recognition_type": "vosk", "vad_type": "webrtcvad"},
-        )
-
-        await fastvoicechat.astart()
-
-        while True:
-            print("waiting...")
-
-            await fastvoicechat.autter_after_listening()
-
-    asyncio.run(main())
