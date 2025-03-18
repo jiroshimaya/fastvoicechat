@@ -21,6 +21,8 @@ dependencies = [
     "webrtcvad>=2.0.10",
     "scipy>=1.15.2",
     "pyopenjtalk-plus>=0.3.4.post11",
+    "pydantic>=2.10.6",
+    "pydantic-settings>=2.8.1",
 ]
 license = "Apache-2.0"
 classifiers = [
