@@ -2,6 +2,7 @@
 /config.py
 /localdata/*
 !/localdata/README.md
+/model
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
