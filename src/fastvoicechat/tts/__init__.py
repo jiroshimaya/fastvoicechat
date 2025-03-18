@@ -1,3 +1,5 @@
-from .tts import TTS, create_tts
+from .tts import TTS
 
-__all__ = ["TTS", "create_tts"]
+__all__ = [
+    "TTS",
+]

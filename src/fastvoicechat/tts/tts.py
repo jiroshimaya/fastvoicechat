@@ -1,19 +1,10 @@
 import asyncio
 import io
 import wave
-from typing import Any, Dict, Literal, Optional
+from typing import Optional
 
-from fastvoicechat.tts.players import (
-    BasePlayer,
-    PyAudioPlayer,
-    SimpleAudioPlayer,
-    SoundDevicePlayer,
-)
-from fastvoicechat.tts.synthesizers import (
-    BaseSynthesizer,
-    PyOpenJTalkSynthesizer,
-    VoiceVoxSynthesizer,
-)
+from fastvoicechat.tts.players import BasePlayer
+from fastvoicechat.tts.synthesizers import BaseSynthesizer
 
 
 def calculate_duration(content: bytes) -> float:
@@ -79,50 +70,14 @@ class TTS:
         await self.synthesizer.aclose()
 
 
-def create_tts(
-    *,
-    synthesizer_type: Literal["voicevox", "pyopenjtalsynthesizer"],
-    synthesizer_kwargs: Dict[str, Any] = {},
-    player_type: Literal["simpleaudio", "pyaudio", "sounddevice"],
-    player_kwargs: Dict[str, Any] = {},
-) -> TTS:
-    if synthesizer_type == "voicevox":
-        synthesizer = VoiceVoxSynthesizer(**synthesizer_kwargs)
-    elif synthesizer_type == "pyopenjtalsynthesizer":
-        synthesizer = PyOpenJTalkSynthesizer(**synthesizer_kwargs)
-    else:
-        raise ValueError(f"Invalid synthesizer type: {synthesizer_type}")
-
-    if player_type == "simpleaudio":
-        player = SimpleAudioPlayer(**player_kwargs)
-    elif player_type == "pyaudio":
-        player = PyAudioPlayer(**player_kwargs)
-    elif player_type == "sounddevice":
-        player = SoundDevicePlayer(**player_kwargs)
-    else:
-        raise ValueError(f"Invalid player type: {player_type}")
-
-    return TTS(synthesizer, player)
-
-
 if __name__ == "__main__":
     # 使用例
     async def amain():
-        # 環境変数からVoiceVoxのホストを取得
+        from fastvoicechat.tts.players import SimpleAudioPlayer
+        from fastvoicechat.tts.synthesizers import PyOpenJTalkSynthesizer
 
-        import os
-
-        from dotenv import load_dotenv
-
-        load_dotenv()
-
-        tts = create_tts(
-            synthesizer_type="voicevox",
-            synthesizer_kwargs={
-                "host": os.getenv("VOICEVOX_HOST", "http://localhost:50021")
-            },
-            player_type="simpleaudio",
-        )
+        # 環境変数から設定を読み込み
+        tts = TTS(PyOpenJTalkSynthesizer(), SimpleAudioPlayer())
 
         print("音声再生を開始します...")
         await tts.aplay_voice("こんにちは、世界！これは非同期TTSのテストです。")
