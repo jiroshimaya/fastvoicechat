@@ -69,8 +69,8 @@ class TCPIPPlayer(BasePlayer):
         try:
             conn.shutdown(1)
             conn.close()
-        except:
-            pass
+        except Exception as e:
+            print(f"Error in close: {e}")
 
     async def aplay_voice(
         self, content: bytes, interrupt_event: Optional[asyncio.Event] = None
