@@ -47,6 +47,8 @@ asyncio_default_fixture_loop_scope = "function"  # または "class", "module", 
 dev = [
     "mypy>=1.15.0",
     "sounddevice>=0.5.1",
+    "sphinx>=8.2.3",
+    "sphinx-rtd-theme>=3.0.2",
     "taskipy>=1.14.1",
     "types-requests>=2.32.0.20250306",
 ]
