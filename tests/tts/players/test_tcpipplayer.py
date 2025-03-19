@@ -199,7 +199,7 @@ async def test_is_playing_with_stop(
 
     # 再生開始
     test_wav_data = create_test_wav_data(0.5)
-    play_task = asyncio.create_task(player.aplay_voice(test_wav_data))
+    _ = asyncio.create_task(player.aplay_voice(test_wav_data))
     await asyncio.sleep(0.02)  # 待機時間を短縮
 
     # 再生中はTrue
