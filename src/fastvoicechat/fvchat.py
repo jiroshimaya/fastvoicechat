@@ -26,7 +26,46 @@ ANSWER_SYSTEM_PROMPT = (
 
 
 class FastVoiceChat:
-    """音声対話を高速に行うための非同期クラス"""
+    """音声対話を高速に行うための非同期クラス
+
+    このクラスは音声認識（STT）、テキスト音声合成（TTS）、大規模言語モデル（LLM）を
+    組み合わせて、自然な音声対話を実現します。以下の特徴があります：
+
+    - 非同期処理による高速なレスポンス
+    - 相槌生成による自然な対話
+    - ユーザーの割り込み発話への対応
+    - 音声認識結果のストリーミング処理
+
+    Attributes:
+        tts (TTS): テキスト音声合成エンジン
+        stt (STT): 音声認識エンジン
+        allow_interrupt (bool): ユーザーの割り込み発話を許可するかどうか
+        llm_backchannel (LLM): 相槌生成用の言語モデル
+        llm_answer (LLM): 応答生成用の言語モデル
+
+    Example:
+        >>> from fastvoicechat import FastVoiceChat
+        >>> from fastvoicechat.tts import TTS
+        >>> from fastvoicechat.tts.synthesizers import VoiceVoxSynthesizer
+        >>> from fastvoicechat.tts.players import SimpleAudioPlayer
+        >>>
+        >>> # シンセサイザーとプレイヤーの初期化
+        >>> synthesizer = VoiceVoxSynthesizer(host='http://localhost:50021', speaker_id=0)
+        >>> player = SimpleAudioPlayer()
+        >>>
+        >>> # TTSエンジンの初期化
+        >>> tts = TTS(synthesizer=synthesizer, player=player)
+        >>>
+        >>> # FastVoiceChatの初期化と開始
+        >>> chat = FastVoiceChat(tts=tts)
+        >>> await chat.astart()
+        >>>
+        >>> # 対話の実行
+        >>> responses = await chat.utter_after_listening()
+        >>>
+        >>> # 終了処理
+        >>> await chat.astop()
+    """
 
     def __init__(
         self,
@@ -39,6 +78,17 @@ class FastVoiceChat:
         backchannel_model: str = "gpt-4o-mini",
         answer_model: str = "gpt-4o",
     ):
+        """FastVoiceChatの初期化
+
+        Args:
+            tts (TTS): テキスト音声合成エンジン
+            stt_kwargs (Dict[str, Any]): 音声認識エンジンの設定パラメータ
+            allow_interrupt (bool): ユーザーの割り込み発話を許可するかどうか
+            backchannel_system_prompt (str): 相槌生成用のシステムプロンプト
+            answer_system_prompt (str): 応答生成用のシステムプロンプト
+            backchannel_model (str): 相槌生成に使用する言語モデル
+            answer_model (str): 応答生成に使用する言語モデル
+        """
         self.tts = tts
         self.allow_interrupt = allow_interrupt
 
@@ -65,7 +115,24 @@ class FastVoiceChat:
         self._running = False
 
     async def ainitialize(self):
-        """コンポーネントを初期化"""
+        """コンポーネントを非同期に初期化します。
+
+        このメソッドは以下のコンポーネントを初期化します：
+        - 音声認識エンジン（STT）
+        - 割り込み検出オブザーバー
+        - 相槌生成用言語モデル
+        - 応答生成用言語モデル
+
+        各コンポーネントは非同期に初期化され、必要なコールバック関数も設定されます。
+        二重初期化を防ぐため、既に初期化済みの場合は何もせずに終了します。
+
+        Note:
+            このメソッドは`astart`メソッドから自動的に呼び出されるため、
+            通常は直接呼び出す必要はありません。
+
+        Raises:
+            RuntimeError: コンポーネントの初期化に失敗した場合
+        """
         if self._initialized:
             return
 
@@ -141,7 +208,24 @@ class FastVoiceChat:
         logging.debug("AsyncFastVoiceChat initialization complete")
 
     async def astart(self):
-        """非同期タスクを開始"""
+        """音声対話システムの全コンポーネントを起動します。
+
+        このメソッドは以下の処理を行います：
+        1. 未初期化の場合は`ainitialize`を呼び出してコンポーネントを初期化
+        2. 音声認識エンジン（STT）の起動
+        3. 割り込み検出オブザーバーの起動
+
+        Note:
+            - このメソッドは非同期で実行されます
+            - 音声対話を開始する前に必ず呼び出す必要があります
+            - 既に起動している場合は安全に無視されます
+
+        Example:
+            >>> chat = FastVoiceChat(tts=tts)
+            >>> await chat.astart()  # 音声対話システムを起動
+            >>> # ここで音声対話の処理を実行
+            >>> await chat.astop()   # 終了時に停止
+        """
         if not self._initialized:
             await self.ainitialize()
 
@@ -156,7 +240,28 @@ class FastVoiceChat:
             await self.interruption_observer.astart()
 
     async def astop(self):
-        """全コンポーネントを停止し、リソースを解放する"""
+        """音声対話システムの全コンポーネントを停止し、リソースを解放します。
+
+        このメソッドは以下の処理を行います：
+        1. 音声認識エンジン（STT）の停止
+        2. 割り込み検出オブザーバーの停止
+        3. 相槌生成タスクの停止とキャンセル
+        4. 応答生成タスクの停止とキャンセル
+        5. TTSエンジンの停止
+        6. 各種リソース（TTSエンジン、LLMクライアント）の解放
+
+        Note:
+            - このメソッドは非同期で実行されます
+            - 音声対話を終了する際に必ず呼び出す必要があります
+            - 既に停止している場合は安全に無視されます
+            - 一度停止したら、再度`astart`を呼び出すまで使用できません
+
+        Example:
+            >>> chat = FastVoiceChat(tts=tts)
+            >>> await chat.astart()
+            >>> # 音声対話の処理
+            >>> await chat.astop()  # 終了時にリソースを解放
+        """
         if not self._running:
             return
 
@@ -236,17 +341,38 @@ class FastVoiceChat:
         restart_stt: bool = True,
         interrupt_event: Optional[asyncio.Event] = None,
     ) -> bool:
-        """
-        テキストを音声に変換して再生
+        """テキストを音声に変換して再生します。
+
+        このメソッドは、指定されたテキストをTTSエンジンを使用して音声に変換し、
+        再生します。音声認識との干渉を防ぐため、デフォルトでは再生中は音声認識を
+        一時停止します。
 
         Args:
-            text: 読み上げるテキスト
-            pause_stt: 音声認識を一時停止するかどうか
-            restart_stt: 再生後に音声認識を再開するかどうか
-            interrupt_event: 再生を中断するためのイベント
+            text (str): 読み上げるテキスト
+            pause_stt (bool, optional): 音声認識を一時停止するかどうか。デフォルトはTrue
+            restart_stt (bool, optional): 再生後に音声認識を再開するかどうか。デフォルトはTrue
+            interrupt_event (asyncio.Event, optional): 再生を中断するためのイベント。
+                Noneの場合はデフォルトのinterrupt_eventが使用されます。
 
         Returns:
             bool: 再生が完了したかどうか（Falseなら中断された）
+
+        Note:
+            - このメソッドは非同期で実行されます
+            - 音声認識を一時停止する場合、再生完了後に自動的に再開されます
+            - interrupt_eventがセットされた場合、再生は即座に中断されます
+
+        Example:
+            >>> # 通常の再生
+            >>> completed = await chat.aplay_voice("こんにちは")
+            >>>
+            >>> # 音声認識を維持したまま再生
+            >>> completed = await chat.aplay_voice("こんにちは", pause_stt=False)
+            >>>
+            >>> # 中断可能な再生
+            >>> event = asyncio.Event()
+            >>> completed = await chat.aplay_voice("こんにちは", interrupt_event=event)
+            >>> # 別のコルーチンでevent.set()を呼び出すと再生が中断されます
         """
         if not self.tts:
             logging.error("TTS not initialized")
