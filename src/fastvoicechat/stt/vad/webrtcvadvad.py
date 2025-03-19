@@ -64,7 +64,7 @@ class WebRTCVAD(BaseVAD):
                     buffer += base_frame
                     # バッファが大きくなりすぎないよう制限
                     if len(buffer) > self.max_buffer_size:
-                        buffer = buffer[-self.max_buffer_size :]
+                        buffer = buffer[-self.max_buffer_size :]  # type: ignore
 
                     if len(buffer) >= self.chunk_bytes:
                         # VAD処理は同期APIなのでrun_in_executorで実行
