@@ -255,7 +255,7 @@ class GoogleSpeechRecognition(BaseRecognition):
                     # レスポンスを処理
                     for result in response.results:
                         if result.alternatives:
-                            transcript = result.alternatives[0].transcript
+                            transcript = result.alternatives[0].transcript  # type: ignore
                             result_type = "final" if result.is_final else "interim"
                             result_dict = {"type": result_type, "text": transcript}
 
@@ -367,7 +367,7 @@ class GoogleSpeechRecognition(BaseRecognition):
         """
         async with self._lock:
             previous_text = self._state.get("result", {}).get("text", "")
-            text = result_dict.get("text", "")
+            text = str(result_dict.get("text", ""))
             delta = text[len(previous_text) :]
             self._state["delta"] = delta
             self._state["result"] = result_dict
