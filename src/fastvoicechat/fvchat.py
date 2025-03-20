@@ -37,11 +37,11 @@ class FastVoiceChat:
     - 音声認識結果のストリーミング処理
 
     Attributes:
-        tts (TTS): テキスト音声合成エンジン
-        stt (STT): 音声認識エンジン
+        tts (:class:`fastvoicechat.tts.TTS`): テキスト音声合成エンジン
+        stt (:class:`fastvoicechat.stt.STT`): 音声認識エンジン
         allow_interrupt (bool): ユーザーの割り込み発話を許可するかどうか
-        llm_backchannel (LLM): 相槌生成用の言語モデル
-        llm_answer (LLM): 応答生成用の言語モデル
+        llm_backchannel (:class:`fastvoicechat.llm.LLM`): 相槌生成用の言語モデル
+        llm_answer (:class:`fastvoicechat.llm.LLM`): 応答生成用の言語モデル
 
     Example:
         >>> from fastvoicechat import FastVoiceChat
@@ -81,7 +81,7 @@ class FastVoiceChat:
         """FastVoiceChatの初期化
 
         Args:
-            tts (TTS): テキスト音声合成エンジン
+            tts (:class:`fastvoicechat.tts.TTS`): テキスト音声合成エンジン
             stt_kwargs (Dict[str, Any]): 音声認識エンジンの設定パラメータ
             allow_interrupt (bool): ユーザーの割り込み発話を許可するかどうか
             backchannel_system_prompt (str): 相槌生成用のシステムプロンプト
