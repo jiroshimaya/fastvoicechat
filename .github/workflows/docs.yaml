@@ -30,6 +30,12 @@ jobs:
       - name: Build documentation
         run: |
           uv run task docs-generate
+          echo "=== Checking directory structure ==="
+          ls -la docs/
+          echo "=== Checking build directory ==="
+          ls -la docs/build/ || echo "build directory not found"
+          echo "=== Checking build/html directory ==="
+          ls -la docs/build/html/ || echo "html directory not found"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
