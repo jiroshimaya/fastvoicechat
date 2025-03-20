@@ -26,7 +26,7 @@ jobs:
           uv remove pyaudio simpleaudio
       - name: Build documentation
         run: |
-          uv run --with dev task docs-generate
+          uv run task docs-generate
 
   deploy:
     environment:
