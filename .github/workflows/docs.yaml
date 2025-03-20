@@ -23,8 +23,7 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: |
-          uv venv
-          uv pip install -e ".[dev]"
+          uv remove pyaudio
       - name: Build documentation
         run: |
           uv run --with dev task docs-generate
