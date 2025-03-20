@@ -23,7 +23,7 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: |
-          uv remove pyaudio
+          uv remove pyaudio simpleaudio
       - name: Build documentation
         run: |
           uv run --with dev task docs-generate
