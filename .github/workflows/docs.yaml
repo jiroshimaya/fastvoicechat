@@ -1,0 +1,40 @@
+name: Deploy documentation to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.py'  # .pyファイルに変更があったときのみトリガー
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Build documentation
+        run: |
+          uv run task docs-generate
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
+        with:
+          artifact_name: documentation
+          path: docs/build/html 
