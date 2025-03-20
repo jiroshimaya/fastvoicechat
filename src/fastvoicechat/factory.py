@@ -16,25 +16,11 @@ from fastvoicechat.tts.synthesizers import PyOpenJTalkSynthesizer, VoiceVoxSynth
 class FastVoiceChatConfig(BaseSettings):
     """FastVoiceChatの設定
 
-    環境変数:
-        FVC_SYNTHESIZER_TYPE: 音声合成エンジンの種類
-        FVC_PLAYER_TYPE: 音声再生エンジンの種類
-        FVC_SYNTHESIZER_VOICEVOX_HOST: VoiceVoxサーバーのホスト
-        FVC_SYNTHESIZER_VOICEVOX_SPEAKER_ID: VoiceVoxの話者ID
-        FVC_RECOGNITION_TYPE: 音声認識エンジンの種類
-        FVC_VAD_TYPE: 音声区間検出エンジンの種類
-        FVC_RECOGNITION_MODEL_PATH: Voskモデルのパス
-        FVC_ALLOW_INTERRUPT: 割り込みを許可するかどうか
+    環境変数はFVC_プレフィックスを使用します。\n
+    例：FVC_SYNTHESIZER_TYPE, FVC_PLAYER_TYPE など
 
-    CLI引数:
-        --synthesizer_type: 音声合成エンジンの種類
-        --player_type: 音声再生エンジンの種類
-        --synthesizer_voicevox_host: VoiceVoxサーバーのホスト
-        --synthesizer_voicevox_speaker_id: VoiceVoxの話者ID
-        --recognition_type: 音声認識エンジンの種類
-        --vad_type: 音声区間検出エンジンの種類
-        --recognition_model_path: Voskモデルのパス
-        --allow_interrupt: 割り込みを許可するかどうか
+    また、同じ設定をCLI引数としても指定できます。\n
+    例：\\--synthesizer-type, \\--player-type など
     """
 
     # TTS関連
