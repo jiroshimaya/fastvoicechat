@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.abspath("../src/fastvoicechat"))
+sys.path.insert(0, os.path.abspath("../src"))
 
 
 def get_version():
@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.autodoc_pydantic",
     "myst_parser",
 ]
 
@@ -49,6 +50,29 @@ exclude_patterns = []
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+}
+
+# -- Napoleon settings -----------------------------------------------------
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_include_private_with_doc = True
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = True
+napoleon_use_param = True
+napoleon_use_rtype = True
+napoleon_type_aliases = None
+
+# -- Autodoc settings -----------------------------------------------------
+autodoc_default_options = {
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # -- Options for HTML output -------------------------------------------------
