@@ -58,7 +58,7 @@ test = "pytest"
 lint = "uvx ruff check ."
 format = "uvx ruff format ."
 check = "pytest && uvx ruff check . && uvx ruff format ."
-docs-generate = "sphinx-apidoc -f -o docs/source src/fastvoicechat && sphinx-build -M clean docs/source docs/build && sphinx-build -b html docs/source docs/build"
+docs-generate = "sphinx-apidoc -f -o docs/source src/fastvoicechat && sphinx-build -M clean docs/source docs/build && sphinx-build -M html docs/source docs/build"
 docs-open = "open docs/build/html/index.html"
 
 [tool.mypy]
