@@ -3,7 +3,7 @@ name: Deploy documentation to GitHub Pages
 on:
   push:
     branches: [ main ]
-    paths:
+    #paths:
       - '**/*.py'  # .pyファイルに変更があったときのみトリガー
   workflow_dispatch:
 
@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: documentation
-          path: docs/build/
+          path: docs/build/html
 
   deploy:
     environment:
