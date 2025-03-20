@@ -4,34 +4,21 @@
    contain the root `toctree` directive.
 
 FastVoiceChat ドキュメント
-========================
+===================================
 
 バージョン: |version|
 
-FastVoiceChatは、音声チャットを簡単に実装するためのPythonライブラリです。
-音声認識、音声合成、音声再生などの機能を統合し、使いやすいインターフェースを提供します。
+FastVoiceChat は、Pythonで実装された高速で使いやすい音声チャットライブラリです。
+リアルタイムの音声処理と自然な音声合成を組み合わせることで、
+インタラクティブな音声コミュニケーションを実現します。
 
-主な機能
+  
+
+Contents
 --------
-
-- 複数の音声合成エンジン対応（VoiceVox、PyOpenJTalk）
-- 複数の音声認識エンジン対応（Google Speech、Vosk）
-- 柔軟な音声再生オプション（SimpleAudio、PyAudio、SoundDevice）
-- 非同期処理のサポート
-- 簡単なセットアップと設定
-
-目次
-----
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   modules/factory
-
-インデックス
-------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   modules
