@@ -306,7 +306,7 @@ wheels = [
 
 [[package]]
 name = "fastvoicechat"
-version = "0.0.16.dev5+gc405171.d20250320"
+version = "0.0.17.dev12+ga856169.d20250320"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
