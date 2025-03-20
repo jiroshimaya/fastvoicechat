@@ -23,7 +23,10 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: |
-          uv remove pyaudio simpleaudio
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev
+          uv venv
+          uv pip install -r requirements.txt
       - name: Build documentation
         run: |
           uv run task docs-generate
@@ -35,9 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build/html
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
-        with:
-          artifact_name: documentation
-          path: docs/build/html 
+        uses: actions/deploy-pages@v4 
