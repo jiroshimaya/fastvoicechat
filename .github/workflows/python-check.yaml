@@ -26,7 +26,7 @@ jobs:
         uv venv
         uv pip install -r requirements.txt
 
-    - name: Run lint and mypy
+    - name: Run lint
       run: |
         uv run task lint
 
