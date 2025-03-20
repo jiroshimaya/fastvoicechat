@@ -1,37 +1,67 @@
 # 初期設定メモ
 
-## Sphinxドキュメント設定
+# リポジトリ構成
 
-### 1. 必要なパッケージのインストール
+以下のような構成を前提とします。
 
-```bash
-uv pip install sphinx sphinx-rtd-theme
+```
+fastvoicechat/
+├── src/
+│   └── fastvoicechat/
+│       └── __init__.py
+├── docs/
+│   ├── source/
+│   │   ├── conf.py
+│   │   ├── index.rst
+│   │   └── modules/
+│   └── build/
+├── tests/
+├── pyproject.toml
+└── README.md
 ```
 
-### 2. Sphinxプロジェクトの初期化
+主なポイント：
+- ソースコードは`src/fastvoicechat/`に配置
+- ドキュメントは`docs/`ディレクトリに配置
+  - `source/`: RSTファイルや設定ファイル
+  - `build/`: ビルドされたHTMLファイル
+- テストは`tests/`ディレクトリに配置
+- 依存関係は`pyproject.toml`で管理
+
+# Sphinx導入手順
+
+## 1. 必要なパッケージのインストール
+
+```sh
+uv add sphinx sphinx-rtd-theme autodoc-pydantic --dev
+```
+## 2. Sphinxの初期設定
+
+1. プロジェクトのルートディレクトリで以下のコマンドを実行してSphinxを初期化します：
 
 ```bash
-mkdir docs
-cd docs
-sphinx-quickstart
+uv run sphinx-quickstart docs
 ```
 
-以下の質問に対する推奨回答：
-- Separate source and build directories (y/n) [n]: y
-- Project name: [プロジェクト名]
-- Author name(s): [著者名]
-- Project release []: 0.1.0
-- Project language [en]: ja
+2. 対話形式で以下のような質問が表示されます：
+   - Separate source and build directories (y/n) [n]: y
+   - Project name: FastVoiceChat
+   - Author name(s): shimajiroxyz
+   - Project release []: 0.1.0
+   - Project language [en]: ja
 
-### 3. conf.pyの設定
+## 3. 設定ファイル
+
+### conf.py
+`docs/source/conf.py`を以下のようにする
 
 ```python
 import os
-import sys
 import subprocess
+import sys
 
-# ソースコードのパスを追加（プロジェクトの構造に応じて調整）
-sys.path.insert(0, os.path.abspath("../src/[プロジェクト名]"))
+sys.path.insert(0, os.path.abspath("../../src"))
+
 
 def get_version():
     try:
@@ -44,118 +74,113 @@ def get_version():
         # git tagが存在しない場合はデフォルトのバージョンを返す
         return "0.1.0"
 
-# プロジェクト情報
-project = "[プロジェクト名]"
-copyright = "2024, [著者名]"
-author = "[著者名]"
-version = get_version()  # git tagから動的に取得
-release = version       # 通常はversionと同じ値を使用
 
-# 拡張機能の設定
+# Configuration file for the Sphinx documentation builder.
+#
+# For the full list of built-in configuration values, see the documentation:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = "FastVoiceChat"
+copyright = "2025, shimajiroxyz"
+author = "shimajiroxyz"
+version = get_version()
+release = version
+language = "ja"
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
 extensions = [
-    "sphinx.ext.autodoc",     # APIドキュメント自動生成
-    "sphinx.ext.napoleon",    # Google/NumPyスタイルのdocstring対応
-    "sphinx.ext.viewcode",    # ソースコードへのリンク
-    "sphinx.ext.intersphinx", # 外部プロジェクトへのリンク
-    "myst_parser",           # Markdownサポート
+    "sphinx.ext.autodoc",  # ソースコード読み込み用
+    "sphinx.ext.napoleon",  # docstring パース用
+    "sphinxcontrib.autodoc_pydantic",  # pydanticのドキュメント生成用
 ]
 
-# テンプレートとパターンの設定
+
 templates_path = ["_templates"]
 exclude_patterns = []
 
-# Intersphinx設定
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-}
 
-# HTMLテーマ設定
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
 html_theme = "sphinx_rtd_theme"
-html_static_path = ["_static"]
-
-# テーマオプション
-html_theme_options = {
-    "navigation_depth": 4,
-    "titles_only": False,
-    "style_external_links": True,
-    "prev_next_buttons_location": "both",
-    "collapse_navigation": False,
-    "sticky_navigation": True,
-    "includehidden": True,
-}
+# -- Options for sphinx-multiversion -----------------------------------------
 ```
 
-### 4. index.rstの基本構成
+ポイントは以下。
+
+- versionはget_version関数でgitのtagから自動で取得
+- extensionsは`autodoc`、`napoleon`、`autodoc-pydantic`の３つ。
+- html_themeに`sphinx_rtd_theme`を使用
+
+### index.rst
+
+`docs/source/index.rst`を以下のようにする。
 
 ```rst
-[プロジェクト名] ドキュメント
-========================
+.. fastvoicechat documentation master file, created by
+   sphinx-quickstart on Wed Mar 19 17:33:32 2025.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+FastVoiceChat ドキュメント
+===================================
 
 バージョン: |version|
 
-[プロジェクトの説明]
+（プロジェクトの概要）
 
 主な機能
 --------
 
 - 機能1
 - 機能2
-- 機能3
 
-目次
-----
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   modules/[モジュール名]
-
-インデックス
-------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   modules
 ```
 
-### 5. モジュールドキュメントの作成
+主なポイントは以下
 
-`docs/source/modules/[モジュール名].rst`の基本構成：
+- toctreeに`modules`を追加。これは後にautodocで自動生成されるrstの名前。
 
-```rst
-モジュール名
-===========
 
-.. module:: [プロジェクト名].[モジュール名]
+## 4. APIドキュメントの自動生成
 
-このモジュールの説明をここに記述します。
+ソースコードのツリー構造をそのままAPIドキュメントに変換する。
 
-関数名
-------
-
-.. autofunction:: [プロジェクト名].[モジュール名].[関数名]
-
-クラス
-------
-
-.. autoclass:: [プロジェクト名].[モジュール名].[クラス名]
-   :members:
-   :undoc-members:
+```sh
+uv run sphinx-apidoc -f -o docs/source src/fastvoicechat
 ```
 
-### 6. ドキュメントのビルド
+docs/sourceにモジュールごとのrstファイルとmodule.rstが生成される。
+
+
+## 5. ビルドと確認
+
+1. ドキュメントのビルド：
 
 ```bash
 cd docs
-uv run sphinx-build -b html source build
+uv run make clean html
 ```
 
-生成されたドキュメントは`docs/build/index.html`で確認できます。
+2. ビルドされたドキュメントは `docs/build/html/` に生成されます。
 
-macOSの場合：
+3. ローカルで確認する場合：
+
 ```bash
-open build/index.html
+open build/html/index.html
 ```
 
 ### 7. バージョン管理
@@ -185,9 +210,3 @@ open build/index.html
        """
        pass
    ```
-
-2. 日本語ドキュメントを書く場合は、docstringも日本語で統一
-
-3. モジュールのインポートエラーが発生する場合は、`conf.py`のパス設定を確認
-
-4. 画像やその他の静的ファイルは`_static`ディレクトリに配置 
